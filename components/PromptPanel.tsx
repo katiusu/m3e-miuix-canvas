@@ -440,6 +440,7 @@ export function PromptPanel({
       options={[
         { key: "android", icon: "android", label: "Android", title: t("targetAndroid", lang) },
         { key: "web", icon: "language", label: "Web", title: t("targetWeb", lang) },
+        { key: "miuix", icon: "widgets", label: "Miuix", title: t("targetMiuix", lang) },
       ]}
       value={doc.platform ?? defaultPlatformOf(doc.frames, doc.frame)}
       onChange={(platform) => onDoc({ platform })}

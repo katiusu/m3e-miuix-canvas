@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { FAB_MENU_TABS, KIND_TEXT, Lang, NAV_TABS, SPLIT_MENU_TABS, TAB_LABELS, getLang, t, SELECT_OPTIONS } from "./i18n";
 import { Contrast, isLightColor, schemeFromSeed } from "./color";
+import { MIUIX_DARK, MIUIX_FONT_FAMILY, MIUIX_LIGHT, miuixMetricOf } from "./miuix";
 
 /* ---------- geometry ---------- */
 export const H = 56; // M3 medium button height (dp)
@@ -433,12 +434,16 @@ const PRESETS: Omit<Palette, "secondary">[] = [
 export const PALETTES: Palette[] = PRESETS.map((p) => ({ ...p, secondary: schemeFromSeed(p.primary, p.label, { keepChroma: true }).secondary }));
 
 /* ---------- theme: the four expressive axes ---------- */
+/** The design language a document is drawn in. M3 is the canvas' native language; Miuix is
+ *  Xiaomi's HyperOS, transcribed in `./miuix` from the Compose library that implements it. */
+export type DesignSystem = "m3" | "miuix";
 export type ShapeScale = "square" | "rounded" | "full";
 export type FontKey = "roboto" | "robotoFlex" | "robotoSerif" | "system";
 export type MotionScheme = "standard" | "expressive";
 export type { Contrast };
 
 export type Theme = {
+  design: DesignSystem;
   dark: boolean;
   /** the app follows the system setting; the canvas shows the mode chosen in `dark` */
   bothModes: boolean;
@@ -450,13 +455,14 @@ export type Theme = {
   motion: MotionScheme;
 };
 
-export const DEFAULT_THEME: Theme = { dark: false, bothModes: false, contrast: "standard", shape: "rounded", font: "roboto", emphasized: false, motion: "standard" };
+export const DEFAULT_THEME: Theme = { design: "m3", dark: false, bothModes: false, contrast: "standard", shape: "rounded", font: "roboto", emphasized: false, motion: "standard" };
 
 /** a stored theme with any missing or unknown field replaced by its default */
 export function normalizeTheme(t: Partial<Theme> | undefined): Theme {
   const d = DEFAULT_THEME;
   if (!t) return d;
   return {
+    design: DESIGNS.some((c) => c.key === t.design) ? (t.design as DesignSystem) : d.design,
     dark: typeof t.dark === "boolean" ? t.dark : d.dark,
     bothModes: typeof t.bothModes === "boolean" ? t.bothModes : d.bothModes,
     contrast: CONTRASTS.some((c) => c.key === t.contrast) ? (t.contrast as Contrast) : d.contrast,
@@ -466,6 +472,19 @@ export function normalizeTheme(t: Partial<Theme> | undefined): Theme {
     motion: t.motion === "expressive" || t.motion === "standard" ? t.motion : d.motion,
   };
 }
+
+export const DESIGNS: { key: DesignSystem; label: string; icon: string }[] = [
+  { key: "m3", label: "Material 3", icon: "palette" },
+  { key: "miuix", label: "Miuix", icon: "palette" },
+];
+
+/** The design language rendering helpers read outside React, the way `curShape` works: the page
+ *  sets it once per render and every geometry helper below follows. */
+let curDesign: DesignSystem = "m3";
+export const setGlobalDesign = (d: DesignSystem) => {
+  curDesign = d;
+};
+export const getDesign = () => curDesign;
 
 export const SHAPES: { key: ShapeScale; label: string; icon: string }[] = [
   { key: "square", label: "Square", icon: "crop_square" },
@@ -501,6 +520,8 @@ const withLangFont = (family: string, lang?: Lang) => {
 
 /** the chosen face, with the language's Noto face behind it; the system font is left to the device */
 export const fontFamilyOf = (f: FontKey, lang?: Lang) => {
+  /* Miuix names no font family at all: it asks the platform, which on HyperOS is MiSans. */
+  if (curDesign === "miuix") return MIUIX_FONT_FAMILY;
   const family = FONTS.find((x) => x.key === f)?.family ?? FONTS[0].family;
   return f === "system" ? family : withLangFont(family, lang);
 };
@@ -536,6 +557,10 @@ export function scaleR(r: number): number {
  *  fine-tuned custom scheme are light and standard contrast; dark mode and the
  *  other contrast levels are generated from the same seed. */
 export function paletteOf(key: string, custom?: Palette | null, theme?: Theme): Palette {
+  /* Miuix ships one hand-written light scheme and one hand-written dark one. It has no contrast
+   * levels and no seed-derived variants, so there is nothing to generate: the two tables are the
+   * whole story. A custom scheme still wins, because the author asked for it by name. */
+  if (theme?.design === "miuix" && !(key === "custom" && custom)) return theme.dark ? MIUIX_DARK : MIUIX_LIGHT;
   const base = (key === "custom" && custom) || PALETTES.find((p) => p.key === key) || PALETTES[0];
   if (!theme || (!theme.dark && theme.contrast === "standard")) {
     /* Saved custom schemes may predate the secondary role. */
@@ -2336,9 +2361,12 @@ export type Group = {
 export type FrameMode = "blank" | "phone";
 
 /** where the generated prompt asks for the app to be built */
-export type Platform = "android" | "web";
+/** Where the document is implemented. Miuix is Android-only and behaves as `android`
+ *  everywhere except in the component library it names, so it is a platform rather than a
+ *  separate axis: every `pl === "web" ? … : …` in the prompt already answers correctly for it. */
+export type Platform = "android" | "web" | "miuix";
 export const DEFAULT_PLATFORM: Platform = "android";
-export const isPlatform = (v: unknown): v is Platform => v === "android" || v === "web";
+export const isPlatform = (v: unknown): v is Platform => v === "android" || v === "web" || v === "miuix";
 /** The target the prompt assumes when the author has not picked one: the web as
  *  soon as a desktop screen exists, Android otherwise. */
 export const defaultPlatformOf = (frames: Frame[], mode: FrameMode): Platform => (mode === "phone" && frames.some((f) => !isPhoneFrame(f)) ? "web" : DEFAULT_PLATFORM);
@@ -2451,7 +2479,28 @@ export const progressThickness = (it: Item): number => {
   return it.kind === "circularProgress" ? Math.min(v, maxRingThickness(it.size ?? KIND_SPEC.circularProgress.w)) : v;
 };
 
+/** A part's box under the current design language. */
 export function sizeOf(it: Item, widths: Record<string, number>) {
+  const size = sizeOfM3(it, widths);
+  if (curDesign !== "miuix") return size;
+  const m = miuixMetricOf(it.kind);
+  if (!m || (m.w === undefined && m.h === undefined)) return size;
+  const s = KIND_SPEC[it.kind];
+  /* A value the author set themselves is never taken away: Miuix supplies defaults, not locks. */
+  const setW = it.size !== undefined && it.size !== (s.defSize ?? s.w);
+  const setH = it.size2 !== undefined;
+  let w = size.w;
+  let h = size.h;
+  if (!setW && m.w !== undefined) w = m.w;
+  if (!setH && m.h !== undefined) {
+    /* a bar keeps the window inset the M3 path draws above or below it */
+    const inset = m.inset === "status" ? (size.w > PHONE_W ? 0 : STATUS_BAR_H) : m.inset === "nav" ? NAV_BAR_H : 0;
+    h = m.h + inset;
+  }
+  return { w, h };
+}
+
+function sizeOfM3(it: Item, widths: Record<string, number>) {
   const s = KIND_SPEC[it.kind];
   const n = it.size ?? s.defSize ?? s.w;
   switch (it.kind) {
@@ -2534,6 +2583,16 @@ export function sizeOf(it: Item, widths: Record<string, number>) {
 /** Corners for a part that is not part of a connected run. Defaults follow the
  *  document's shape scale; a radius the author typed in is kept as is. */
 export function baseRadii(it: Item): Radii {
+  const r = baseRadiiM3(it);
+  if (curDesign !== "miuix") return r;
+  const m = miuixMetricOf(it.kind);
+  /* A metric radius is a spec and replaces the M3 formula, but a radius the author typed in — a
+   * per-corner box, or a bar's own top/bottom pair — still wins. */
+  if (m?.radius === undefined || it.corners || it.radiusTop !== undefined || it.radiusBottom !== undefined) return r;
+  return uniformRadii(scaleR(m.radius));
+}
+
+function baseRadiiM3(it: Item): Radii {
   const s = KIND_SPEC[it.kind];
   switch (it.kind) {
     /* a button stays fully round whatever height it is given */

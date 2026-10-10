@@ -147,7 +147,7 @@ describe("buildPrompt — palette section", () => {
   });
 
   it("bothModes=true emits both light and dark color sections", () => {
-    const doc = baseDoc({ theme: { dark: false, bothModes: true, contrast: "standard", shape: "rounded", font: "roboto", emphasized: false, motion: "standard" } });
+    const doc = baseDoc({ theme: { design: "m3", dark: false, bothModes: true, contrast: "standard", shape: "rounded", font: "roboto", emphasized: false, motion: "standard" } });
     const out = buildPrompt(doc, widths, undefined, "en");
     // bothModes is the only path that pushes both scheme headers — one
     // section alone can never emit "Dark scheme:".

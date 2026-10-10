@@ -84,6 +84,7 @@ import {
   fontFamilyOf,
   uiFontFamily,
   normalizeTheme,
+  setGlobalDesign,
   setGlobalShape,
   MEASURED,
   NAV_BAR_H,
@@ -132,7 +133,7 @@ import { LoadingIndicator } from "@/components/Loading";
 import { draftDesign } from "@/lib/ai";
 import { ShareDialog } from "@/components/ShareMenu";
 import { ColorPanel } from "@/components/ColorPanel";
-import { MotionPanel, ShapePanel, TypePanel } from "@/components/ThemePanel";
+import { DesignPanel, MotionPanel, ShapePanel, TypePanel } from "@/components/ThemePanel";
 import { ThemeContext, ensureFontLoaded, ensureLangFontLoaded } from "@/lib/theme";
 import { BottomSheet, MobileActionBar, MobileInspector, MobileLang, MobileSettings } from "@/components/Mobile";
 import { ConfirmDialog, IconBtn, Segmented } from "@/components/ui";
@@ -439,11 +440,12 @@ function ThinkingRing({ p, frame }: { p: Palette; frame: Frame }) {
   );
 }
 
-type LeftTab = "parts" | "layers" | "color" | "shape" | "type" | "motion" | "ai";
+type LeftTab = "parts" | "layers" | "design" | "color" | "shape" | "type" | "motion" | "ai";
 /** the left rail: parts and layers, then the four theme axes of the whole design */
-const LEFT_TABS: { key: LeftTab; icon: string; title: "parts" | "layers" | "colors" | "shape" | "typography" | "motion" | "ai" }[] = [
+const LEFT_TABS: { key: LeftTab; icon: string; title: "parts" | "layers" | "design" | "colors" | "shape" | "typography" | "motion" | "ai" }[] = [
   { key: "parts", icon: "add_box", title: "parts" },
   { key: "layers", icon: "layers", title: "layers" },
+  { key: "design", icon: "design_services", title: "design" },
   { key: "color", icon: "palette", title: "colors" },
   { key: "shape", icon: "rounded_corner", title: "shape" },
   { key: "type", icon: "text_fields", title: "typography" },
@@ -567,6 +569,8 @@ export default function Editor({ initialLang, onReady }: { initialLang: Lang; on
   const p = useMemo(() => paletteOf(paletteKey, customPalette, theme), [paletteKey, customPalette, theme]);
   /* corner helpers read the shape scale outside React; keep it current before anything renders */
   setGlobalShape(theme.shape);
+  /* likewise the design language, which paletteOf and the geometry helpers read */
+  setGlobalDesign(theme.design);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const measureEls = useRef<Map<string, HTMLElement>>(new Map());
@@ -4131,6 +4135,8 @@ export default function Editor({ initialLang, onReady }: { initialLang: Lang; on
                     theme={theme}
                     onTheme={patchTheme}
                   />
+                ) : leftTab === "design" ? (
+                  <DesignPanel p={p} theme={theme} onChange={patchTheme} />
                 ) : leftTab === "shape" ? (
                   <ShapePanel p={p} theme={theme} onChange={patchTheme} />
                 ) : leftTab === "type" ? (

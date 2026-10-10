@@ -57,6 +57,7 @@ import {
   TOP_BAR_SIZES,
   topBarHeightOf,
 } from "./tokens";
+import { MIUIX_ROLES, type PaletteRole } from "./miuix";
 
 const VARIANT_TEXT: Record<Lang, Record<Variant, string>> = {
   ja: { filled: "塗りつぶし", tonal: "トーナル", elevated: "エレベーテッド", outlined: "アウトライン", text: "テキスト" },
@@ -1100,8 +1101,24 @@ function describeScreen(lines: string[], groups: Group[], frameRect: Rect | null
 
 /* ---------- color palette ---------- */
 
-function paletteLines(p: Palette): string[] {
-  const row = (pairs: [string, string][]) => `- ${pairs.map(([k, v]) => `${k} ${v}`).join(" / ")}`;
+/** The colour list under Miuix, whose scheme is not Material 3's: every role is renamed onto the
+ *  Miuix token that carries it, so what reaches the reader is a name Miuix actually declares. */
+const miuixPaletteLines = (p: Palette) => paletteLines(p, (k) => MIUIX_ROLES[k as PaletteRole]);
+
+function paletteLines(p: Palette, rename?: (k: string) => string): string[] {
+  /* a renamed role can collide with one already printed: the first spelling carries the value, so
+     the repeat is dropped rather than listed twice */
+  const seen = new Set<string>();
+  const row = (pairs: [string, string][]) =>
+    `- ${pairs
+      .map(([k, v]): [string, string] => [rename ? rename(k) : k, v])
+      .filter(([k]) => {
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .map(([k, v]) => `${k} ${v}`)
+      .join(" / ")}`;
   return [
     row([
       ["primary", p.primary],
@@ -1424,6 +1441,63 @@ function themeLines(th: Theme, lang: Lang): string[] {
   return [`- ${n.shape[th.shape]}`, `- ${FONT_NOTE[lang](fontName)}${sp}${th.emphasized ? n.emphasized : n.plainType}`, `- ${n.motion[th.motion]}`];
 }
 
+/**
+ * What a Miuix reader has to be told that a Material 3 reader does not. Every name here was
+ * checked against the library's own sources (Colors.kt, TextStyles.kt, the `basic/` components
+ * and the blur module) rather than inferred, because the two schemes share almost no role names
+ * and an invented one would not compile.
+ */
+const MIUIX_NOTES: Record<Lang, string[]> = {
+  ja: [
+    "UI は Miuix（`top.yukonga.miuix.kmp`、`miuix-ui`／`miuix-preference`／`miuix-icons`／`miuix-blur`／`miuix-nav` の各アーティファクト、バージョン 0.9.4）で実装し、`androidx.compose.material3` は使わない。コンポーネント・形状・寸法はすべてこのライブラリから取り、用意されている部品を独自に描画しない。",
+    "UI 全体を `MiuixTheme { … }`（`top.yukonga.miuix.kmp.theme.MiuixTheme`）で包む。配下に `MiuixTheme.colorScheme` と `MiuixTheme.textStyles` を供給するため、その外で Miuix のコンポーネントを使うと色を取得できない。",
+    "色は `MiuixTheme.colorScheme` に設定し、そこからのみ参照する。Miuix のロールは 53 個で Material 3 とは別系統であり、`tertiary`、`onSurfaceVariant`、`surfaceContainerLow`、`inverseSurface`、`scrim` は存在しない。Material 3 の `onSurfaceVariant` は `onSurfaceSecondary`／`onSurfaceVariantSummary`／`onSurfaceVariantActions` に分かれ、区切り線は `dividerLine` を使う。",
+    "タイポグラフィは `MiuixTheme.textStyles` から取る。14 のスタイルは `main`、`paragraph`、`body1`、`body2`、`button`、`footnote1`、`footnote2`、`headline1`、`headline2`、`subtitle`、`title1`〜`title4` で、`titleLarge` や `bodyMedium` ではない。",
+    "各コンポーネントの寸法と間隔は、そのコンポーネント自身の `*Defaults` から取る。高さやパディングを手で書かない。",
+    "Miuix の角は連続曲率（squircle）で `miuix-squircle` が描画する。形状はコンポーネントが与えるものを使い、`RoundedCornerShape` に置き換えない。API 33 未満ではライブラリ側が自動で縮退する。",
+    "ボトムバーは 2 通りを用意し、切り替えられるようにする。フローティングのすりガラス版は `FloatingNavigationBar` と `FloatingNavigationBarItem` に `Modifier.textureBlur(backdrop = …, shape = …)` でブラーをかけ、背面のコンテンツを `Modifier.layerBackdrop(…)` で印し、`rememberLayerBackdrop()` から供給する。貼り付く通常版は `NavigationBar` と `RowScope.NavigationBarItem` を使う。ブラーは背面レイヤーを読むため、バーだけをぼかしても効果は出ない。",
+    "オーバーレイ系（`OverlayDialog`、`OverlayBottomSheet`、`OverlayListPopup`）は `Scaffold` の祖先が必要で、独立ウィンドウ系（`WindowDialog`、`WindowBottomSheet`、`WindowListPopup`）は不要。`Scaffold` は `floatingToolbar` スロットの置き場所でもある。",
+    "Miuix は `MiuixTheme` 内で `LocalIndication` を通じて独自の押下フィードバック（縮小＋全面の押下オーバーレイ）を提供する。Material のリップルを重ねない。",
+    "画面端の余白は 28dp、区切り線は `HorizontalDivider`／`VerticalDivider`（`dividerLine` を読む）を使う。この項目は上記 Material 3 の余白と区切り線の指示を置き換える。",
+  ],
+  en: [
+    "Build the UI on Miuix (`top.yukonga.miuix.kmp` — the `miuix-ui`, `miuix-preference`, `miuix-icons`, `miuix-blur` and `miuix-nav` artifacts, version 0.9.4) instead of `androidx.compose.material3`. Every component, shape and metric comes from that library; do not redraw a part it already provides.",
+    "Wrap the UI in `MiuixTheme { … }` (`top.yukonga.miuix.kmp.theme.MiuixTheme`). It hands `MiuixTheme.colorScheme` and `MiuixTheme.textStyles` to everything below it, so a Miuix component used outside it has no colors to read.",
+    "Set colors on `MiuixTheme.colorScheme` and read them only from there. Miuix has 53 roles and they are not Material 3's: there is no `tertiary`, no `onSurfaceVariant`, no `surfaceContainerLow`, no `inverseSurface` and no `scrim`. Where Material 3 says `onSurfaceVariant`, Miuix splits into `onSurfaceSecondary`, `onSurfaceVariantSummary` and `onSurfaceVariantActions`; separators read `dividerLine`.",
+    "Take type from `MiuixTheme.textStyles`. Its 14 styles are `main`, `paragraph`, `body1`, `body2`, `button`, `footnote1`, `footnote2`, `headline1`, `headline2`, `subtitle` and `title1`-`title4` — not `titleLarge` or `bodyMedium`.",
+    "Let each component bring its own geometry from its `*Defaults` object rather than writing heights and paddings by hand.",
+    "Miuix corners are continuous (squircle) and drawn by `miuix-squircle`: take the shapes the components give and do not substitute `RoundedCornerShape`. Below API 33 the library falls back on its own.",
+    "Offer the bottom bar both ways and let it be switched: the floating glass bar — `FloatingNavigationBar` with `FloatingNavigationBarItem`, blurred by `Modifier.textureBlur(backdrop = …, shape = …)` over a `rememberLayerBackdrop()` that the content behind marks with `Modifier.layerBackdrop(…)` — or the flush `NavigationBar` with `RowScope.NavigationBarItem`. The blur reads that backdrop layer, so blurring the bar alone shows nothing.",
+    "Overlay layers (`OverlayDialog`, `OverlayBottomSheet`, `OverlayListPopup`) need a `Scaffold` ancestor; the window ones (`WindowDialog`, `WindowBottomSheet`, `WindowListPopup`) do not. `Scaffold` is also where the `floatingToolbar` slot lives.",
+    "Miuix brings its own press feedback — a scale plus a full-size press overlay — through `LocalIndication` inside `MiuixTheme`. Do not add Material ripples on top of it.",
+    "Screen margins are 28dp, and dividers are `HorizontalDivider` / `VerticalDivider`, which read `dividerLine`. This replaces the Material 3 spacing and divider guidance above.",
+  ],
+  zh: [
+    "界面用 Miuix（`top.yukonga.miuix.kmp`，即 `miuix-ui`、`miuix-preference`、`miuix-icons`、`miuix-blur`、`miuix-nav` 构件，版本 0.9.4）实现，不要用 `androidx.compose.material3`。组件、形状和尺寸都取自这个库，库里已有的构件不要自己画。",
+    "整个界面包在 `MiuixTheme { … }`（`top.yukonga.miuix.kmp.theme.MiuixTheme`）里。它把 `MiuixTheme.colorScheme` 和 `MiuixTheme.textStyles` 提供给下面的所有内容；在它之外使用 Miuix 组件会取不到颜色。",
+    "颜色只通过 `MiuixTheme.colorScheme` 设置和读取。Miuix 有 53 个角色，和 Material 3 不是一套：没有 `tertiary`、没有 `onSurfaceVariant`、没有 `surfaceContainerLow`、没有 `inverseSurface`、没有 `scrim`。Material 3 的 `onSurfaceVariant` 在 Miuix 里拆成了 `onSurfaceSecondary`、`onSurfaceVariantSummary`、`onSurfaceVariantActions`；分隔线用 `dividerLine`。",
+    "排版使用 `MiuixTheme.textStyles`，14 个字阶分别是 `main`、`paragraph`、`body1`、`body2`、`button`、`footnote1`、`footnote2`、`headline1`、`headline2`、`subtitle` 和 `title1`〜`title4`，不是 `titleLarge`、`bodyMedium`。",
+    "各组件的尺寸和间距由它自己的 `*Defaults` 提供，不要手写高度和 padding。",
+    "Miuix 的圆角是连续曲率（squircle），由 `miuix-squircle` 绘制：形状取组件给的，不要换成 `RoundedCornerShape`；API 33 以下库会自己降级。",
+    "底栏两种做法都要给，并留出切换开关：悬浮毛玻璃底栏用 `FloatingNavigationBar` + `FloatingNavigationBarItem`，用 `Modifier.textureBlur(backdrop = …, shape = …)` 加模糊，背景内容用 `Modifier.layerBackdrop(…)` 标记并由 `rememberLayerBackdrop()` 提供；贴底普通底栏用 `NavigationBar` + `RowScope.NavigationBarItem`。模糊读的是背景层，只模糊底栏本身不会有效果。",
+    "浮层组件（`OverlayDialog`、`OverlayBottomSheet`、`OverlayListPopup`）需要 `Scaffold` 作为祖先；独立窗口的那几个（`WindowDialog`、`WindowBottomSheet`、`WindowListPopup`）不需要。`Scaffold` 也是 `floatingToolbar` 槽所在的位置。",
+    "Miuix 在 `MiuixTheme` 里通过 `LocalIndication` 自带按压反馈（缩放 + 全尺寸按压遮罩），不要再叠 Material 的涟漪。",
+    "屏幕边缘留 28dp，分隔线用 `HorizontalDivider` / `VerticalDivider`（读取 `dividerLine`）。这一条取代上面 Material 3 的间距和分隔线说明。",
+  ],
+  ko: [
+    "UI는 Miuix(`top.yukonga.miuix.kmp`, 즉 `miuix-ui`/`miuix-preference`/`miuix-icons`/`miuix-blur`/`miuix-nav` 아티팩트, 버전 0.9.4)로 구현하고 `androidx.compose.material3`는 쓰지 않는다. 컴포넌트와 모양과 치수는 모두 이 라이브러리에서 가져오고, 이미 있는 부품을 직접 그리지 않는다.",
+    "UI 전체를 `MiuixTheme { … }`(`top.yukonga.miuix.kmp.theme.MiuixTheme`)로 감싼다. 하위에 `MiuixTheme.colorScheme`과 `MiuixTheme.textStyles`를 제공하므로, 그 밖에서 Miuix 컴포넌트를 쓰면 색을 읽을 수 없다.",
+    "색은 `MiuixTheme.colorScheme`에 설정하고 거기서만 참조한다. Miuix의 역할은 53개이며 Material 3와 다른 체계다: `tertiary`, `onSurfaceVariant`, `surfaceContainerLow`, `inverseSurface`, `scrim`은 없다. Material 3의 `onSurfaceVariant`는 `onSurfaceSecondary`/`onSurfaceVariantSummary`/`onSurfaceVariantActions`로 나뉘고, 구분선은 `dividerLine`을 쓴다.",
+    "타이포그래피는 `MiuixTheme.textStyles`에서 가져온다. 14개 스타일은 `main`, `paragraph`, `body1`, `body2`, `button`, `footnote1`, `footnote2`, `headline1`, `headline2`, `subtitle`, `title1`~`title4`이며 `titleLarge`나 `bodyMedium`이 아니다.",
+    "각 컴포넌트의 치수와 간격은 그 컴포넌트의 `*Defaults`에서 가져온다. 높이와 패딩을 직접 쓰지 않는다.",
+    "Miuix의 모서리는 연속 곡률(squircle)이며 `miuix-squircle`이 그린다. 모양은 컴포넌트가 주는 것을 쓰고 `RoundedCornerShape`로 바꾸지 않는다. API 33 미만에서는 라이브러리가 알아서 대체한다.",
+    "하단 바는 두 가지를 모두 만들고 전환할 수 있게 한다. 떠 있는 유리 바는 `FloatingNavigationBar`와 `FloatingNavigationBarItem`에 `Modifier.textureBlur(backdrop = …, shape = …)`로 블러를 주고, 뒤 콘텐츠를 `Modifier.layerBackdrop(…)`으로 표시해 `rememberLayerBackdrop()`으로 공급한다. 붙어 있는 일반 바는 `NavigationBar`와 `RowScope.NavigationBarItem`을 쓴다. 블러는 뒤 레이어를 읽으므로 바만 흐리게 하면 효과가 없다.",
+    "오버레이 계열(`OverlayDialog`, `OverlayBottomSheet`, `OverlayListPopup`)은 `Scaffold` 조상이 필요하고, 독립 창 계열(`WindowDialog`, `WindowBottomSheet`, `WindowListPopup`)은 필요 없다. `Scaffold`는 `floatingToolbar` 슬롯이 있는 곳이기도 하다.",
+    "Miuix는 `MiuixTheme` 안에서 `LocalIndication`을 통해 자체 누름 피드백(축소 + 전체 크기 누름 오버레이)을 제공한다. Material 리플을 겹쳐 넣지 않는다.",
+    "화면 가장자리는 28dp, 구분선은 `HorizontalDivider`/`VerticalDivider`(`dividerLine`을 읽음)를 쓴다. 이 항목이 위 Material 3의 간격과 구분선 지침을 대체한다.",
+  ],
+};
+
 /** the closing guidance; the lines that depend on the target are written for the chosen platform */
 const GENERAL: Record<Lang, (string | ((pl: Platform) => string))[]> = {
   ja: [
@@ -1431,9 +1505,9 @@ const GENERAL: Record<Lang, (string | ((pl: Platform) => string))[]> = {
     (pl: Platform) => `データは本物として扱う。ユーザーが作成したデータは${pl === "web" ? "ブラウザに（IndexedDB など）" : "端末に（Room や DataStore など）"}永続化し、${pl === "web" ? "再読み込み" : "再起動"}後も残す。ダミーやサンプルのデータは入れず、何もない状態には空の案内を表示する。入力は検証し、失敗や削除は適切に確認・通知する。`,
     "スケッチに書かれていない振る舞いは、画面の目的と部品のラベルから補う。動作の指定がないボタンや項目は、そのラベルにふさわしい処理（保存、送信、詳細画面を開く、など）を実装し、何も起きないままにしない。",
     "配置は意図（順序・まとまり・上下左右の位置関係）を守れば十分で、寸法や余白は内容に合わせて調整してよい。実機で崩れるなら、スケッチより動くことを優先する。",
-    (pl: Platform) => `コンポーネントは ${pl === "web" ? "Material Web" : "Jetpack Compose の material3（Expressive API を含む最新版）"} の標準部品を使い、ライブラリにある部品を独自描画しない。`,
+    (pl: Platform) => `コンポーネントは ${pl === "web" ? "Material Web" : pl === "miuix" ? "Miuix（top.yukonga.miuix.kmp）" : "Jetpack Compose の material3（Expressive API を含む最新版）"} の標準部品を使い、ライブラリにある部品を独自描画しない。`,
     "色は必ず上のカラースキームのロール名（primary、surfaceContainer など）で参照し、ハードコードした色を使わない。",
-    "余白は画面端 16dp、部品同士は 8〜16dp を基本にし、タイポグラフィは M3 の型（titleLarge、bodyMedium など）を使う。",
+    (pl: Platform) => pl === "miuix" ? "余白は画面端 28dp、部品同士は 8〜16dp を基本にし、タイポグラフィは MiuixTheme.textStyles の型（title1、body1 など）を使う。" : "余白は画面端 16dp、部品同士は 8〜16dp を基本にし、タイポグラフィは M3 の型（titleLarge、bodyMedium など）を使う。",
     "「横一列に並べる」と書いた部品は必ず 1 つの Row（横並びコンテナ）に入れて同じ行に置き、縦に積んだり次の行に折り返したりしない。行の高さは一番高い部品に合わせ、他は縦中央に揃える。",
     "「〜の中に重ねて配置」と書いた部品は、その容器（ボックスやカード）を背景にした Box の上に重ねて描く。重なりは意図したものなので、レイアウトの都合で分離したり順序を変えたりしない。前後関係は記述の順（後に書いたものが前面）に従う。",
     "タップできる部品にはリップルと軽い縮小のフィードバックを付ける。「戻る」は入ったときの遷移を逆再生し、システムの戻る操作（戻るジェスチャー・戻るボタン）でも同じ動きにする。",
@@ -1444,9 +1518,9 @@ const GENERAL: Record<Lang, (string | ((pl: Platform) => string))[]> = {
     (pl: Platform) => `Treat the data as real. Persist what the user creates ${pl === "web" ? "in the browser (IndexedDB or similar) so it survives reloads" : "on the device (Room, DataStore or similar) so it survives restarts"}. Do not ship dummy or sample data; show an empty state when there is nothing yet. Validate input, and confirm or report failures and deletions appropriately.`,
     "Fill in behavior the sketch leaves out from the purpose of the screen and the labels of the parts. A button or item with no behavior specified should do what its label implies (save, send, open a detail screen, and so on), never nothing.",
     "The layout only needs to keep the intent (order, grouping, relative placement); sizes and spacing may be adjusted to fit the content. If something would break on a device, prefer working over matching the sketch.",
-    (pl: Platform) => `Use the standard components from ${pl === "web" ? "Material Web" : "Jetpack Compose material3 (latest, including the Expressive APIs)"}; do not custom-draw parts the library provides.`,
+    (pl: Platform) => `Use the standard components from ${pl === "web" ? "Material Web" : pl === "miuix" ? "Miuix (top.yukonga.miuix.kmp)" : "Jetpack Compose material3 (latest, including the Expressive APIs)"}; do not custom-draw parts the library provides.`,
     "Always reference colors through the scheme roles above (primary, surfaceContainer, …) instead of hard-coded values.",
-    "Keep 16dp screen margins and 8–16dp between parts, and use the M3 type styles (titleLarge, bodyMedium, …).",
+    (pl: Platform) => pl === "miuix" ? "Keep 28dp screen margins and 8–16dp between parts, and use the Miuix type styles from MiuixTheme.textStyles (title1, body1, …)." : "Keep 16dp screen margins and 8–16dp between parts, and use the M3 type styles (titleLarge, bodyMedium, …).",
     "Parts described as \"in one row\" must share a single Row (horizontal container) on the same line; never stack them vertically or wrap them. The row is as tall as its tallest part and the others are vertically centered in it.",
     "Parts described as \"layered inside\" a container are drawn on top of that container (a Box with the container as its background). The overlap is intentional: do not separate or reorder them for layout reasons. Later items in the description are drawn in front of earlier ones.",
     "Give every tappable part ripple plus a slight press-scale. \"Back\" plays the entry transition in reverse, and the system back gesture / button must do the same.",
@@ -1457,9 +1531,9 @@ const GENERAL: Record<Lang, (string | ((pl: Platform) => string))[]> = {
     (pl: Platform) => `把数据当作真实数据处理：用户创建的数据要持久化到${pl === "web" ? "浏览器（IndexedDB 等），重新加载" : "设备（Room、DataStore 等），重启"}后仍保留。不要放入虚拟或示例数据，没有数据时显示空状态提示。校验输入，删除和失败要有适当的确认或提示。`,
     "草图没有写明的行为，根据屏幕目的和组件标签补全。未指定行为的按钮或项目要实现与其标签相符的操作（保存、发送、打开详情页等），不要什么都不做。",
     "布局只需保持意图（顺序、分组、相对位置），尺寸和间距可根据内容调整。若在真机上会出问题，宁可能用也不要死守草图。",
-    (pl: Platform) => `组件使用 ${pl === "web" ? "Material Web" : "Jetpack Compose material3（包含 Expressive API 的最新版）"} 的标准组件，库里已有的组件不要自行绘制。`,
+    (pl: Platform) => `组件使用 ${pl === "web" ? "Material Web" : pl === "miuix" ? "Miuix（top.yukonga.miuix.kmp）" : "Jetpack Compose material3（包含 Expressive API 的最新版）"} 的标准组件，库里已有的组件不要自行绘制。`,
     "颜色必须通过上面配色方案的角色名（primary、surfaceContainer 等）引用，不要写死颜色值。",
-    "屏幕边缘留 16dp，组件之间 8〜16dp，排版使用 M3 的字体样式（titleLarge、bodyMedium 等）。",
+    (pl: Platform) => pl === "miuix" ? "屏幕边缘留 28dp，组件之间 8〜16dp，排版使用 MiuixTheme.textStyles 的字阶（title1、body1 等）。" : "屏幕边缘留 16dp，组件之间 8〜16dp，排版使用 M3 的字体样式（titleLarge、bodyMedium 等）。",
     "写明“横向排成一行”的组件必须放进同一个 Row（横向容器）并在同一行显示，不要竖着堆叠或换行。行高以最高的组件为准，其余组件垂直居中。",
     "写明“内部叠放”的组件要绘制在该容器（容器框或卡片）之上（以容器为背景的 Box）。这种叠放是有意为之，不要因布局原因拆开或调整顺序。前后关系按描述顺序，后写的在前面。",
     "可点击的组件加涟漪和轻微缩放反馈。“返回”反向播放进入时的过渡动画，系统返回手势／返回键也要做同样的效果。",
@@ -1470,9 +1544,9 @@ const GENERAL: Record<Lang, (string | ((pl: Platform) => string))[]> = {
     (pl: Platform) => `데이터를 실제 데이터로 취급한다. 사용자가 만든 데이터는 ${pl === "web" ? "브라우저(IndexedDB 등)에 저장해 새로고침" : "기기(Room, DataStore 등)에 저장해 재시작"} 후에도 유지한다. 더미나 샘플 데이터는 넣지 않고 데이터가 없으면 빈 상태를 표시한다. 입력을 검증하고 실패와 삭제는 적절히 확인하거나 알린다.`,
     "스케치에 없는 동작은 화면 목적과 부품 레이블을 바탕으로 보완한다. 동작이 지정되지 않은 버튼이나 항목도 레이블에 맞는 동작(저장, 보내기, 상세 화면 열기 등)을 수행해야 한다.",
     "레이아웃은 의도한 순서, 그룹, 상대 위치를 유지하되 크기와 간격은 내용에 맞게 조정할 수 있다. 실제 기기에서 깨진다면 스케치 일치보다 정상 동작을 우선한다.",
-    (pl: Platform) => `${pl === "web" ? "Material Web" : "최신 Expressive API를 포함한 Jetpack Compose material3"}의 표준 컴포넌트를 사용하고 라이브러리에 있는 부품을 직접 그리지 않는다.`,
+    (pl: Platform) => `${pl === "web" ? "Material Web" : pl === "miuix" ? "Miuix(top.yukonga.miuix.kmp)" : "최신 Expressive API를 포함한 Jetpack Compose material3"}의 표준 컴포넌트를 사용하고 라이브러리에 있는 부품을 직접 그리지 않는다.`,
     "색상은 하드코딩하지 말고 위 색상 구성의 역할 이름(primary, surfaceContainer 등)으로 참조한다.",
-    "화면 가장자리는 16dp, 부품 사이는 8~16dp를 기본으로 하고 M3 글꼴 스타일(titleLarge, bodyMedium 등)을 사용한다.",
+    (pl: Platform) => pl === "miuix" ? "화면 가장자리는 28dp, 부품 사이는 8~16dp를 기본으로 하고 MiuixTheme.textStyles의 글꼴 스타일(title1, body1 등)을 사용한다." : "화면 가장자리는 16dp, 부품 사이는 8~16dp를 기본으로 하고 M3 글꼴 스타일(titleLarge, bodyMedium 등)을 사용한다.",
     "'한 행에 배치'한 부품은 하나의 Row(가로 컨테이너)에서 같은 줄에 두고 세로로 쌓거나 줄 바꿈하지 않는다. 행 높이는 가장 높은 부품에 맞추고 나머지는 세로 중앙 정렬한다.",
     "'내부에 겹쳐 배치'한 부품은 해당 컨테이너(상자 또는 카드)를 배경으로 하는 Box 위에 그린다. 이 겹침은 의도된 것이므로 분리하거나 순서를 바꾸지 않으며 나중에 설명된 항목을 앞에 그린다.",
     "탭 가능한 부품에는 리플과 약한 축소 피드백을 준다. '뒤로'는 진입 전환을 반대로 재생하고 시스템 뒤로 제스처나 버튼도 같은 동작을 수행한다.",
@@ -1535,7 +1609,7 @@ const PH = {
               ? `スマホの縦画面（412×892）と${pl === "web" ? "デスクトップのブラウザ画面" : "横向きのタブレット画面"}（1280×800）の両方を想定し、同じ名前の画面は 1 つの画面の 2 つの幅として、レスポンシブに実装します。`
               : "レイアウトは自由配置で、"
       }${both ? "ライトモードとダークモードの両方に対応し、端末のシステム設定に従って切り替えます。" : dark ? "ダークモード固定です。" : "ライトモード固定です。"}`,
-    platform: (pl: Platform) => (pl === "web" ? "実装先は Web（ブラウザで動くアプリ）です。" : "実装先は Android（ネイティブアプリ）です。"),
+    platform: (pl: Platform) => (pl === "web" ? "実装先は Web（ブラウザで動くアプリ）です。" : pl === "miuix" ? "実装先は Android（ネイティブアプリ）で、UI は Miuix（top.yukonga.miuix.kmp）で描画します。" : "実装先は Android（ネイティブアプリ）です。"),
     schemeHead: (dark: boolean) => (dark ? "ダークスキーム:" : "ライトスキーム:"),
     sketch:
       "下の画面構成は、意図を伝えるためのラフスケッチです。完成図の仕様ではないので、静止画のように再現するのではなく、この種のアプリとして普通に期待される機能を一通り備えた、実際に使える完成品として仕上げてください。",
@@ -1543,10 +1617,15 @@ const PH = {
     dynamic: (pl: Platform) =>
       pl === "web"
         ? "ダイナミックカラーを使います。ブラウザや OS がユーザーのアクセントカラーを公開している場合はそれを種にして Material 3 のスキームを生成し、取得できない環境では下の色をフォールバックにしてください。"
-        : "ダイナミックカラーを使います。Android 12 以降ではユーザーの壁紙から生成されるカラースキーム（dynamicLightColorScheme / dynamicDarkColorScheme）を適用し、それが使えない端末では下の色をフォールバックにしてください。",
-    colorIntro: (label: string, fallback: boolean, th: Theme) => {
+        : pl === "miuix"
+          ? "ダイナミックカラーを使います。Miuix 自身の取色を使い、ThemeController(colorSchemeMode = ColorSchemeMode.MonetSystem)（MonetLight / MonetDark で明暗を固定）で切り替えます。現在の配色が壁紙由来かは MiuixTheme.isDynamicColor で判定でき、material3 の dynamicLightColorScheme は使いません。取色できない場合は下の色をフォールバックにしてください。"
+          : "ダイナミックカラーを使います。Android 12 以降ではユーザーの壁紙から生成されるカラースキーム（dynamicLightColorScheme / dynamicDarkColorScheme）を適用し、それが使えない端末では下の色をフォールバックにしてください。",
+    colorIntro: (label: string, fallback: boolean, th: Theme, pl: Platform) => {
       const scheme = `Material 3 の${th.bothModes ? "ライトとダークの" : th.dark ? "ダーク" : "ライト"}カラースキーム${th.contrast === "high" ? "（高コントラスト）" : th.contrast === "medium" ? "（中コントラスト）" : ""}`;
-      return `${fallback ? "フォールバック用のテーマ" : "テーマ"}は ${label} 系です。${scheme}に次の色を設定し、UI の色はすべてこのロール経由で参照してください。`;
+      /* Miuix has no Material 3 scheme to set these on and no contrast levels to name, so the
+         sentence points at the one it does have instead. */
+      const onto = pl === "miuix" ? "MiuixTheme.colorScheme（以下のロール名は Miuix 自身のトークン名です）" : scheme;
+      return `${fallback ? "フォールバック用のテーマ" : "テーマ"}は ${label} 系です。${onto}に次の色を設定し、UI の色はすべてこのロール経由で参照してください。`;
     },
     hTheme: "## 形・文字・動き",
     hLayout: "## 画面構成",
@@ -1561,6 +1640,7 @@ const PH = {
     hStyle: "## 各部品のスタイル",
     styleIntro: "使っている部品ごとの目安です。数値は M3 Expressive の標準値なので、標準コンポーネントで実現できるものは標準に任せ、内容に合わせて調整して構いません。",
     hGeneral: "## 全体の指針",
+    hMiuix: "## Miuix（HyperOS）",
   },
   en: {
     screen: "screen",
@@ -1579,7 +1659,7 @@ const PH = {
               ? `Target both a portrait phone (412×892) and a ${pl === "web" ? "desktop browser viewport" : "landscape tablet"} (1280×800); screens that share a name are one screen at two widths, so build them responsively`
               : "The layout is free-form"
       }, ${both ? "supporting both light and dark mode and following the device's system setting" : `${dark ? "dark" : "light"} mode only`}.`,
-    platform: (pl: Platform) => (pl === "web" ? "Build it for the web, as an app that runs in the browser." : "Build it for Android, as a native app."),
+    platform: (pl: Platform) => (pl === "web" ? "Build it for the web, as an app that runs in the browser." : pl === "miuix" ? "Build it for Android, as a native app whose UI is drawn by Miuix (top.yukonga.miuix.kmp)." : "Build it for Android, as a native app."),
     schemeHead: (dark: boolean) => (dark ? "Dark scheme:" : "Light scheme:"),
     sketch:
       "The layout below is a rough sketch that conveys intent, not a finished spec. Do not reproduce it as a static picture; build the complete, usable app that this kind of product is normally expected to be.",
@@ -1587,10 +1667,15 @@ const PH = {
     dynamic: (pl: Platform) =>
       pl === "web"
         ? "Use dynamic color: where the browser or OS exposes the user's accent color, generate the Material 3 scheme from it as the seed, and fall back to the colors below where it is unavailable."
-        : "Use dynamic color: on Android 12+ apply the scheme generated from the user's wallpaper (dynamicLightColorScheme / dynamicDarkColorScheme), and fall back to the colors below where it is unavailable.",
-    colorIntro: (label: string, fallback: boolean, th: Theme) => {
+        : pl === "miuix"
+          ? "Use dynamic color through Miuix itself: `ThemeController(colorSchemeMode = ColorSchemeMode.MonetSystem)` (MonetLight / MonetDark pin the mode), and `MiuixTheme.isDynamicColor` says whether the scheme came from the wallpaper. Do not call material3's dynamicLightColorScheme. Fall back to the colors below where it is unavailable."
+          : "Use dynamic color: on Android 12+ apply the scheme generated from the user's wallpaper (dynamicLightColorScheme / dynamicDarkColorScheme), and fall back to the colors below where it is unavailable.",
+    colorIntro: (label: string, fallback: boolean, th: Theme, pl: Platform) => {
       const scheme = `Material 3 ${th.bothModes ? "light and dark color schemes" : `${th.dark ? "dark" : "light"} color scheme`}${th.contrast === "high" ? " (high contrast)" : th.contrast === "medium" ? " (medium contrast)" : ""}`;
-      return `The ${fallback ? "fallback theme" : "theme"} is ${label}. Set these on the ${scheme} and reference every UI color through its role.`;
+      /* Miuix has no Material 3 scheme to set these on and no contrast levels to name, so the
+         sentence points at the one it does have instead. */
+      const onto = pl === "miuix" ? "`MiuixTheme.colorScheme` (the roles below are Miuix's own token names)" : `the ${scheme}`;
+      return `The ${fallback ? "fallback theme" : "theme"} is ${label}. Set these on ${onto} and reference every UI color through its role.`;
     },
     hTheme: "## Shape, type and motion",
     hLayout: "## Layout",
@@ -1605,6 +1690,7 @@ const PH = {
     hStyle: "## Component styles",
     styleIntro: "Per-component guidance for the parts in use. The numbers are the M3 Expressive defaults: let the standard components handle whatever they already do, and adjust where the content calls for it.",
     hGeneral: "## General guidance",
+    hMiuix: "## Miuix (HyperOS)",
   },
   zh: {
     screen: "屏幕",
@@ -1623,7 +1709,7 @@ const PH = {
               ? `同时面向竖屏手机（412×892）和${pl === "web" ? "桌面浏览器视口" : "横屏平板"}（1280×800）；同名的屏幕是同一个屏幕的两种宽度，请做成响应式`
               : "布局为自由排布"
       }，${both ? "同时支持浅色和深色模式，并跟随设备的系统设置切换" : `只做${dark ? "深色" : "浅色"}模式`}。`,
-    platform: (pl: Platform) => (pl === "web" ? "实现目标是 Web（在浏览器中运行的应用）。" : "实现目标是 Android（原生应用）。"),
+    platform: (pl: Platform) => (pl === "web" ? "实现目标是 Web（在浏览器中运行的应用）。" : pl === "miuix" ? "实现目标是 Android 原生应用，界面用 Miuix（top.yukonga.miuix.kmp）绘制。" : "实现目标是 Android（原生应用）。"),
     schemeHead: (dark: boolean) => (dark ? "深色配色：" : "浅色配色："),
     sketch:
       "下面的屏幕结构是传达意图的草图，不是最终规格。不要把它当静态图片照搬，而要做成这类应用通常应具备的功能齐全、真正可用的成品。",
@@ -1631,10 +1717,15 @@ const PH = {
     dynamic: (pl: Platform) =>
       pl === "web"
         ? "使用动态配色：浏览器或系统提供用户强调色时，以它为种子生成 Material 3 配色方案；无法获取时使用下面的颜色作为备用。"
-        : "使用动态配色：在 Android 12 及以上应用由用户壁纸生成的配色方案（dynamicLightColorScheme / dynamicDarkColorScheme），不支持的设备则使用下面的颜色作为备用。",
-    colorIntro: (label: string, fallback: boolean, th: Theme) => {
+        : pl === "miuix"
+          ? "使用动态配色：用 Miuix 自己的取色，`ThemeController(colorSchemeMode = ColorSchemeMode.MonetSystem)`（MonetLight / MonetDark 可固定明暗），由 `MiuixTheme.isDynamicColor` 判断当前配色是否来自壁纸；不要用 material3 的 dynamicLightColorScheme。无法取色时使用下面的颜色作为备用。"
+          : "使用动态配色：在 Android 12 及以上应用由用户壁纸生成的配色方案（dynamicLightColorScheme / dynamicDarkColorScheme），不支持的设备则使用下面的颜色作为备用。",
+    colorIntro: (label: string, fallback: boolean, th: Theme, pl: Platform) => {
       const scheme = `Material 3 的${th.bothModes ? "浅色和深色" : th.dark ? "深色" : "浅色"}配色方案${th.contrast === "high" ? "（高对比度）" : th.contrast === "medium" ? "（中对比度）" : ""}`;
-      return `${fallback ? "备用主题" : "主题"}为 ${label} 系。请在${scheme}中设置以下颜色，UI 的所有颜色都通过这些角色引用。`;
+      /* Miuix has no Material 3 scheme to set these on and no contrast levels to name, so the
+         sentence points at the one it does have instead. */
+      const onto = pl === "miuix" ? "MiuixTheme.colorScheme（下面的角色名是 Miuix 自己的 token 名）" : scheme;
+      return `${fallback ? "备用主题" : "主题"}为 ${label} 系。请在${onto}中设置以下颜色，UI 的所有颜色都通过这些角色引用。`;
     },
     hTheme: "## 形状、字体与动效",
     hLayout: "## 屏幕结构",
@@ -1649,6 +1740,7 @@ const PH = {
     hStyle: "## 各组件的样式",
     styleIntro: "以下是所用组件的参考。数值均为 M3 Expressive 的标准值，能用标准组件实现的就交给标准组件，并可根据内容适当调整。",
     hGeneral: "## 整体原则",
+    hMiuix: "## Miuix（HyperOS）",
   },
   ko: {
     screen: "화면",
@@ -1656,14 +1748,22 @@ const PH = {
     titleOnly: (name: string) => `${name} 화면`,
     titleAll: (n: number) => (n > 1 ? "이 앱" : "이 화면"),
     target: (vp: Viewport, pl: Platform, dark: boolean, both: boolean) => `${vp === "phone" ? "세로형 휴대전화 화면(412×892dp)을 대상으로 하며" : vp === "desktop" ? `${pl === "web" ? "데스크톱 브라우저" : "가로형 태블릿"} 화면(1280×800 기준)을 대상으로 하며` : vp === "mixed" ? `세로형 휴대전화(412×892)와 ${pl === "web" ? "데스크톱 브라우저" : "가로형 태블릿"}(1280×800)을 모두 지원하며, 이름이 같은 화면은 서로 다른 너비의 동일한 화면이므로 반응형으로 구현하고` : "레이아웃은 자유 배치이며"}, ${both ? "라이트 모드와 다크 모드를 모두 지원하고 기기의 시스템 설정을 따른다" : `${dark ? "다크" : "라이트"} 모드만 지원한다`}.`,
-    platform: (pl: Platform) => (pl === "web" ? "브라우저에서 실행되는 웹 앱으로 구현한다." : "Android 네이티브 앱으로 구현한다."),
+    platform: (pl: Platform) => (pl === "web" ? "브라우저에서 실행되는 웹 앱으로 구현한다." : pl === "miuix" ? "Android 네이티브 앱으로 구현하고 UI는 Miuix(top.yukonga.miuix.kmp)로 그린다." : "Android 네이티브 앱으로 구현한다."),
     schemeHead: (dark: boolean) => (dark ? "다크 색상 구성:" : "라이트 색상 구성:"),
     sketch: "아래 화면 구성은 의도를 전달하는 대략적인 스케치이며 완성 사양이 아니다. 정적인 그림처럼 복제하지 말고 이 종류의 제품에 일반적으로 필요한 기능을 갖춘 실제 사용 가능한 앱으로 완성한다.",
     hColor: "## 색상",
-    dynamic: (pl: Platform) => pl === "web" ? "동적 색상을 사용한다. 브라우저나 운영체제에서 사용자의 강조 색상을 제공하면 이를 기준으로 Material 3 색상 구성을 생성하고, 사용할 수 없으면 아래 색상으로 대체한다." : "동적 색상을 사용한다. Android 12 이상에서는 사용자 배경화면에서 생성된 색상 구성(dynamicLightColorScheme / dynamicDarkColorScheme)을 적용하고 사용할 수 없는 기기에서는 아래 색상을 대체 값으로 사용한다.",
-    colorIntro: (label: string, fallback: boolean, th: Theme) => {
+    dynamic: (pl: Platform) =>
+      pl === "web"
+        ? "동적 색상을 사용한다. 브라우저나 운영체제에서 사용자의 강조 색상을 제공하면 이를 기준으로 Material 3 색상 구성을 생성하고, 사용할 수 없으면 아래 색상으로 대체한다."
+        : pl === "miuix"
+          ? "동적 색상은 Miuix 자체 색상 추출을 사용한다. `ThemeController(colorSchemeMode = ColorSchemeMode.MonetSystem)`(MonetLight / MonetDark로 명암 고정)로 전환하고, 현재 색상이 배경화면에서 왔는지는 `MiuixTheme.isDynamicColor`로 판단한다. material3의 dynamicLightColorScheme은 쓰지 않는다. 추출할 수 없으면 아래 색상을 대체 값으로 사용한다."
+          : "동적 색상을 사용한다. Android 12 이상에서는 사용자 배경화면에서 생성된 색상 구성(dynamicLightColorScheme / dynamicDarkColorScheme)을 적용하고 사용할 수 없는 기기에서는 아래 색상을 대체 값으로 사용한다.",
+    colorIntro: (label: string, fallback: boolean, th: Theme, pl: Platform) => {
       const scheme = `Material 3 ${th.bothModes ? "라이트 및 다크" : th.dark ? "다크" : "라이트"} 색상 구성${th.contrast === "high" ? "(고대비)" : th.contrast === "medium" ? "(중간 대비)" : ""}`;
-      return `${fallback ? "대체 테마" : "테마"}는 ${label} 계열이다. ${scheme}에 다음 색상을 설정하고 모든 UI 색상을 해당 역할로 참조한다.`;
+      /* Miuix has no Material 3 scheme to set these on and no contrast levels to name, so the
+         sentence points at the one it does have instead. */
+      const onto = pl === "miuix" ? "MiuixTheme.colorScheme(아래 역할 이름은 Miuix 자체 토큰 이름이다)" : scheme;
+      return `${fallback ? "대체 테마" : "테마"}는 ${label} 계열이다. ${onto}에 다음 색상을 설정하고 모든 UI 색상을 해당 역할로 참조한다.`;
     },
     hTheme: "## 모양, 글꼴 및 모션",
     hLayout: "## 화면 구성",
@@ -1678,6 +1778,7 @@ const PH = {
     hStyle: "## 부품별 스타일",
     styleIntro: "사용된 부품별 지침입니다. 수치는 M3 Expressive 기본값이며 표준 컴포넌트가 제공하는 동작은 그대로 사용하고 내용에 맞게 조정할 수 있습니다.",
     hGeneral: "## 전체 지침",
+    hMiuix: "## Miuix(HyperOS)",
   },
 };
 
@@ -1751,9 +1852,12 @@ export function promptMarks(text: string, frames: Frame[], lang: Lang = getLang(
 export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameId?: string, lang: Lang = getLang()): string {
   doc = { ...doc, groups: constrainModalRails(doc.groups) };
   const th = normalizeTheme(doc.theme);
-  const pal = paletteOf(doc.paletteKey, doc.customPalette, th);
-  const phone = doc.frame === "phone";
   const platform: Platform = doc.platform ?? defaultPlatformOf(doc.frames, doc.frame);
+  /* asking for Miuix means asking for Miuix's own scheme, so the platform settles the design axis
+     as well — unless the author named a custom palette, which stays theirs. */
+  const themed: Theme = platform === "miuix" && !(doc.paletteKey === "custom" && doc.customPalette) ? { ...th, design: "miuix" } : th;
+  const pal = paletteOf(doc.paletteKey, doc.customPalette, themed);
+  const phone = doc.frame === "phone";
   const allFrames = phone ? doc.frames : [];
   const only = onlyFrameId ? allFrames.find((f) => f.id === onlyFrameId) : undefined;
   const frames = only ? [only] : allFrames;
@@ -1794,21 +1898,30 @@ export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameI
   lines.push(ph.intro(title, doc.brief.trim()));
   lines.push(ph.target(viewport, platform, th.dark, th.bothModes));
   lines.push(ph.platform(platform));
+  /* Miuix is not a Material theme: its components, roles and metrics all differ, so its rules are
+     written out as one block instead of being folded into the per-part notes further down. */
+  if (platform === "miuix") {
+    lines.push("");
+    lines.push(ph.hMiuix);
+    for (const s of MIUIX_NOTES[lang]) lines.push(`- ${s}`);
+  }
   lines.push(ph.sketch);
 
   lines.push("");
   lines.push(ph.hColor);
   if (doc.dynamicColor) lines.push(ph.dynamic(platform));
-  lines.push(ph.colorIntro(pal.label, !!doc.dynamicColor, th));
+  lines.push(ph.colorIntro(pal.label, !!doc.dynamicColor, th, platform));
+  /* under Miuix the same colours are printed under the library's own role names */
+  const paint = platform === "miuix" ? miuixPaletteLines : paletteLines;
   if (th.bothModes) {
-    const light = paletteOf(doc.paletteKey, doc.customPalette, { ...th, dark: false });
-    const dark = paletteOf(doc.paletteKey, doc.customPalette, { ...th, dark: true });
+    const light = paletteOf(doc.paletteKey, doc.customPalette, { ...themed, dark: false });
+    const dark = paletteOf(doc.paletteKey, doc.customPalette, { ...themed, dark: true });
     lines.push(ph.schemeHead(false));
-    lines.push(...paletteLines(light));
+    lines.push(...paint(light));
     lines.push(ph.schemeHead(true));
-    lines.push(...paletteLines(dark));
+    lines.push(...paint(dark));
   } else {
-    lines.push(...paletteLines(pal));
+    lines.push(...paint(pal));
   }
 
   lines.push("");

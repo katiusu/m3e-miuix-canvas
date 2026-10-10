@@ -15,10 +15,10 @@ const SECTIONS: Record<Lang, string[]> = {
 };
 
 const PLATFORM_LINE: Record<Lang, Record<Platform, string>> = {
-  ja: { android: "実装先は Android（ネイティブアプリ）です。", web: "実装先は Web（ブラウザで動くアプリ）です。" },
-  en: { android: "Build it for Android, as a native app.", web: "Build it for the web, as an app that runs in the browser." },
-  zh: { android: "实现目标是 Android（原生应用）。", web: "实现目标是 Web（在浏览器中运行的应用）。" },
-  ko: { android: "Android 네이티브 앱으로 구현한다.", web: "브라우저에서 실행되는 웹 앱으로 구현한다." },
+  ja: { android: "実装先は Android（ネイティブアプリ）です。", web: "実装先は Web（ブラウザで動くアプリ）です。", miuix: "実装先は Android（ネイティブアプリ）で、UI は Miuix（top.yukonga.miuix.kmp）で描画します。" },
+  en: { android: "Build it for Android, as a native app.", web: "Build it for the web, as an app that runs in the browser.", miuix: "Build it for Android, as a native app whose UI is drawn by Miuix (top.yukonga.miuix.kmp)." },
+  zh: { android: "实现目标是 Android（原生应用）。", web: "实现目标是 Web（在浏览器中运行的应用）。", miuix: "实现目标是 Android 原生应用，界面用 Miuix（top.yukonga.miuix.kmp）绘制。" },
+  ko: { android: "Android 네이티브 앱으로 구현한다.", web: "브라우저에서 실행되는 웹 앱으로 구현한다.", miuix: "Android 네이티브 앱으로 구현하고 UI는 Miuix(top.yukonga.miuix.kmp)로 그린다." },
 };
 
 /* One phone screen with a top app bar, a connected pair of buttons (one with a
@@ -49,6 +49,12 @@ function fixture(platform: Platform = "android", extraItems: Item[] = []): Doc {
 function build(lang: Lang, platform: Platform = "android", extraItems: Item[] = []) {
   setGlobalLang(lang);
   return buildPrompt(fixture(platform, extraItems), {}, undefined, lang);
+}
+
+/* the colour bullets, between the colour heading and the next one */
+function paletteBullets(prompt: string, lang: Lang) {
+  const ls = lines(prompt);
+  return ls.slice(ls.indexOf(SECTIONS[lang][0]), ls.indexOf(SECTIONS[lang][1])).filter((l) => l.startsWith("- "));
 }
 
 const lines = (prompt: string) => prompt.split("\n");
@@ -296,6 +302,52 @@ describe("buildPrompt structure", () => {
     const prompt = buildPrompt(doc, {}, undefined, "ja");
     expect(headings(prompt)).toEqual(SECTIONS.ja);
     expect(prompt).toContain("「Save」");
+  });
+});
+
+/* Miuix is a platform rather than a Material theme: the colors carry that library's own role
+ * names and the components come from another artifact, so the prompt has to say both. */
+describe("buildPrompt for the Miuix platform", () => {
+  afterEach(() => setGlobalLang("ja"));
+
+  const MIUIX_HEADING: Record<Lang, string> = {
+    ja: "## Miuix（HyperOS）",
+    en: "## Miuix (HyperOS)",
+    zh: "## Miuix（HyperOS）",
+    ko: "## Miuix(HyperOS)",
+  };
+
+  it.each(LANGS)("carries the Miuix block in %s", (lang) => {
+    const prompt = build(lang, "miuix");
+    expect(headings(prompt)).toContain(MIUIX_HEADING[lang]);
+    expect(prompt).toContain("MiuixTheme");
+    expect(prompt).toContain("top.yukonga.miuix.kmp");
+  });
+
+  it.each(LANGS)("states the Miuix target on the platform line in %s", (lang) => {
+    const ls = lines(build(lang, "miuix"));
+    expect(ls[2]).toBe(PLATFORM_LINE[lang].miuix);
+    expect(ls[2]).not.toBe(PLATFORM_LINE[lang].android);
+  });
+
+  it("prints the palette under role names Miuix actually declares", () => {
+    const palette = paletteBullets(build("en", "miuix"), "en").join(" ");
+    expect(palette).toContain("onSurfaceVariantSummary");
+    expect(palette).toContain("dividerLine");
+    expect(palette).toContain("onSecondaryVariant");
+    /* roles Material 3 has and Miuix does not: they would not compile if they reached a reader */
+    expect(palette).not.toContain("onSurfaceVariant ");
+    expect(palette).not.toContain("surfaceContainerLow");
+    expect(palette).not.toContain("outlineVariant");
+    expect(palette).not.toContain("inverseSurface");
+  });
+
+  it("leaves every other platform on its Material 3 wording", () => {
+    setGlobalLang("en");
+    const prompt = buildPrompt(fixture("android"), {}, undefined, "en");
+    expect(prompt).not.toContain("Miuix");
+    expect(prompt).not.toContain("onSurfaceVariantSummary");
+    expect(headings(prompt)).toEqual(SECTIONS.en);
   });
 });
 

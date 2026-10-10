@@ -44,6 +44,7 @@ import {
   cardTextColorOf,
   dateLayoutOf,
   onToken,
+  getDesign,
   scaleR,
   menuRises,
   sizeOf,
@@ -71,6 +72,7 @@ import { CarouselBody, DatePickerBody, TimePickerBody } from "./Pickers";
 import { t, useLang } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import { railSelectedLabelColor } from "@/lib/color";
+import { squircleClip } from "@/lib/miuix";
 
 /** weight of a heading or label: heavier under the emphasized type setting */
 const useWeight = () => {
@@ -1757,6 +1759,9 @@ export function boxStyle(item: Item, p: Palette): React.CSSProperties {
 
 function shadowOf(item: Item): string {
   if (NO_BOX.includes(item.kind) || menuOpen(item)) return "none";
+  /* Miuix draws flat surfaces, so the elevation the M3 paths give a card, a button or a bar is
+     dropped rather than carried over; only the window-hosted parts below keep one. */
+  if (getDesign() === "miuix" && !MIUIX_ELEVATED.includes(item.kind)) return "none";
   switch (item.kind) {
     case "navRail":
       return item.railModal && item.railExpanded ? "0 2px 6px rgba(0,0,0,0.16), 0 1px 2px rgba(0,0,0,0.10)" : "none";
@@ -1786,6 +1791,11 @@ function shadowOf(item: Item): string {
 export type { Radii };
 
 /** Corner radii are driven continuously by the magnet; a stiff spring keeps them on the pointer. */
+/** The parts Miuix itself hands to an Android window, and so the only ones that keep a
+ *  shadow: every surface drawn inside a page is flat (basic/Card.kt carries no elevation at
+ *  all). The squircle clip uses the same list, because a clip would cut a shadow away. */
+const MIUIX_ELEVATED: Item["kind"][] = ["dialog", "bottomSheet", "timePicker", "datePicker"];
+
 const RADIUS_TWEEN = { type: "spring" as const, stiffness: 900, damping: 48, mass: 0.4 };
 
 export function M3Node({
@@ -1837,6 +1847,12 @@ export function M3Node({
   const r = radii ?? baseRadii(item);
   const size = sizeOf(drawn, widths);
   const measured = isMeasured(drawn);
+  /* Miuix corners are continuous, which `border-radius` cannot express, so the library's own
+     squircle path is clipped over the box. A clip also cuts away the selection ring and any
+     shadow, so a part being edited — or one that keeps a shadow — stays a plain rounded box.
+     The preview and the PNG export use the plain shell below, which is never selected, so what
+     leaves the tool always carries the real corner. */
+  const squircle = getDesign() === "miuix" && !selected && shadowOf(drawn) === "none" ? squircleClip(size.w, size.h, r) : undefined;
   const clips = !NO_BOX.includes(item.kind) && !menuOpen(drawn) && item.kind !== "textField" && item.kind !== "select";
   /* only the button family lights up from inside; everything else is left as it was drawn */
   const lights = !!ripple && RIPPLE_KINDS.includes(item.kind);
@@ -1903,6 +1919,7 @@ export function M3Node({
         display: measured ? "inline-flex" : "block",
         alignItems: "center",
         overflow: clips ? "hidden" : "visible",
+        clipPath: squircle,
         /* the selection ring sticks out 5px (3px offset + 2px ring); in a run the next
            sibling sits 3px away and would overpaint that edge — lift the selected part.
            Runs never overlap, so the lift only beats the sibling that hides the ring.
@@ -1950,6 +1967,9 @@ export function M3Static({
   const r = radii ?? baseRadii(item);
   const size = sizeOf(item, {});
   const measured = isMeasured(item);
+  /* never selected here, so the squircle always applies; a measured part is skipped because this
+     shell has no measured width to draw the path over */
+  const squircle = getDesign() === "miuix" && !measured && shadowOf(item) === "none" ? squircleClip(size.w, size.h, r) : undefined;
   const clips = !NO_BOX.includes(item.kind) && !menuOpen(item) && item.kind !== "textField" && item.kind !== "select";
   return (
     <div
@@ -1960,6 +1980,7 @@ export function M3Static({
         display: measured ? "inline-flex" : "block",
         alignItems: "center",
         overflow: clips ? "hidden" : "visible",
+        clipPath: squircle,
         boxSizing: "border-box",
         boxShadow: shadowOf(item),
         borderTopLeftRadius: r.tl,

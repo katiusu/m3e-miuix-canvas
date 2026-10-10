@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { FONTS, Palette, SHAPES, ShapeScale, Theme } from "@/lib/tokens";
+import { DESIGNS, FONTS, Palette, SHAPES, ShapeScale, Theme } from "@/lib/tokens";
+import { squirclePath } from "@/lib/miuix";
 import { ensureFontLoaded } from "@/lib/theme";
 import { Lang, t, useLang } from "@/lib/i18n";
 import { Icon } from "./M3Node";
@@ -55,6 +56,59 @@ function OptionCard({
       {children}
       <span style={{ fontSize: 12, fontWeight: 600, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
     </button>
+  );
+}
+
+/** The two cards that pick the document's design language. */
+export function DesignPanel({ p, theme, onChange }: { p: Palette; theme: Theme; onChange: (patch: Partial<Theme>) => void }) {
+  const lang = useLang();
+  return (
+    <div className="no-scrollbar" style={{ height: "100%", overflowY: "auto", padding: "12px 12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: p.onSurfaceVariant, padding: "0 4px" }}>{t("designSystem", lang)}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {DESIGNS.map((d) => {
+          const on = theme.design === d.key;
+          const miuix = d.key === "miuix";
+          return (
+            <button
+              key={d.key}
+              onClick={() => onChange({ design: d.key })}
+              aria-pressed={on}
+              className="m3-press"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 10,
+                padding: "12px 14px 14px",
+                borderRadius: 16,
+                border: "none",
+                background: on ? p.secondaryContainer : p.surfaceContainerLow,
+                color: on ? p.onSecondaryContainer : p.onSurface,
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {miuix ? t("designMiuix", lang) : t("designM3", lang)}
+                </span>
+                {on && <Icon name="check" size={20} />}
+              </span>
+              {/* the same 26dp tile under each language: a circular arc, then a squircle */}
+              {miuix ? (
+                <svg width="64" height="26" aria-hidden>
+                  <path d={squirclePath(64, 26, 10)} fill={p.primary} />
+                </svg>
+              ) : (
+                <span style={{ display: "block", width: 64, height: 26, borderRadius: 8, background: p.primary }} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <Hint p={p}>{t("designHint", lang)}</Hint>
+    </div>
   );
 }
 
