@@ -308,6 +308,7 @@ describe("normalizeTheme", () => {
   it("returns the documented defaults when given undefined", () => {
     const t = normalizeTheme(undefined);
     expect(t).toEqual({
+      design: "m3",
       dark: false,
       bothModes: false,
       contrast: "standard",
