@@ -342,6 +342,22 @@ describe("buildPrompt for the Miuix platform", () => {
     expect(palette).not.toContain("inverseSurface");
   });
 
+  it.each(LANGS)("speaks Miuix in the intro and the theme notes in %s", (lang) => {
+    const ls = lines(build(lang, "miuix"));
+    expect(ls[0]).toContain("Miuix");
+    expect(ls[0]).not.toContain("Material 3 Expressive");
+    /* the three theme bullets, between their heading and the next one */
+    const theme = ls.slice(ls.indexOf(SECTIONS[lang][1]), ls.indexOf(SECTIONS[lang][2])).join("\n");
+    expect(theme).toContain("squircle");
+    expect(theme).toContain("folmeSpring");
+    expect(theme).not.toContain("Roboto");
+    expect(theme).not.toContain("MotionScheme.standard");
+  });
+
+  it("gives the Miuix notes precedence over the Material 3 per-part notes", () => {
+    expect(build("en", "miuix")).toContain("this section wins");
+  });
+
   it("leaves every other platform on its Material 3 wording", () => {
     setGlobalLang("en");
     const prompt = buildPrompt(fixture("android"), {}, undefined, "en");

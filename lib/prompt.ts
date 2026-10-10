@@ -1433,7 +1433,34 @@ const THEME_NOTES: Record<Lang, { shape: Record<Theme["shape"], string>; emphasi
   },
 };
 
-function themeLines(th: Theme, lang: Lang): string[] {
+/* Miuix reads shape, type and motion from its own system, so the three lines above would be
+   wrong for it. These replace them rather than being appended, to keep one voice per prompt. */
+const MIUIX_THEME_NOTES: Record<Lang, [string, string, string]> = {
+  ja: [
+    "角丸は Miuix の連続曲率（squircle）で、各コンポーネント自身の形状を使う。M3 の角丸値は指定しない。",
+    "タイポグラフィは Miuix の字階（`MiuixTheme.textStyles`）と Miuix のウェイトを使い、M3 の字階名は当てはめない。",
+    "モーションは Miuix の folme spring（`top.yukonga.miuix.kmp.anim.folmeSpring`）を使い、M3 の `MotionScheme` は使わない。",
+  ],
+  en: [
+    "Corners are Miuix's continuous curvature (squircle), taken from each component's own shape; do not set M3 corner values.",
+    "Set type with Miuix's own styles (`MiuixTheme.textStyles`) and its weights, not the M3 style names.",
+    "Drive motion with Miuix's folme spring (`top.yukonga.miuix.kmp.anim.folmeSpring`) rather than the M3 `MotionScheme`.",
+  ],
+  zh: [
+    "圆角是 Miuix 的连续曲率（squircle），从组件自己的形状取，不要指定 M3 的圆角数值。",
+    "排版用 Miuix 的字阶（`MiuixTheme.textStyles`）和 Miuix 的字重，不要套 M3 的字阶名。",
+    "动效用 Miuix 的 folme spring（`top.yukonga.miuix.kmp.anim.folmeSpring`），不要用 M3 的 `MotionScheme`。",
+  ],
+  ko: [
+    "모서리는 Miuix의 연속 곡률(squircle)이며 각 컴포넌트가 주는 모양을 그대로 쓴다. M3 모서리 값은 지정하지 않는다.",
+    "타이포그래피는 Miuix 자체 글꼴 스타일(`MiuixTheme.textStyles`)과 Miuix의 굵기를 쓰고 M3 글꼴 스타일 이름은 적용하지 않는다.",
+    "모션은 Miuix의 folme spring(`top.yukonga.miuix.kmp.anim.folmeSpring`)을 쓰고 M3의 `MotionScheme`은 쓰지 않는다.",
+  ],
+};
+
+function themeLines(th: Theme, lang: Lang, pl: Platform = "android"): string[] {
+  /* Miuix declares its own shape, type and motion, so none of the M3 wording below applies. */
+  if (pl === "miuix") return MIUIX_THEME_NOTES[lang].map((s) => `- ${s}`);
   const n = THEME_NOTES[lang];
   const font = FONTS.find((f) => f.key === th.font);
   const fontName = font?.key === "system" ? (lang === "ja" ? "端末のシステムフォント" : lang === "zh" ? "设备的系统字体" : lang === "ko" ? "기기의 시스템 글꼴" : "the device's system font") : (font?.label ?? "Roboto");
@@ -1459,6 +1486,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "オーバーレイ系（`OverlayDialog`、`OverlayBottomSheet`、`OverlayListPopup`）は `Scaffold` の祖先が必要で、独立ウィンドウ系（`WindowDialog`、`WindowBottomSheet`、`WindowListPopup`）は不要。`Scaffold` は `floatingToolbar` スロットの置き場所でもある。",
     "Miuix は `MiuixTheme` 内で `LocalIndication` を通じて独自の押下フィードバック（縮小＋全面の押下オーバーレイ）を提供する。Material のリップルを重ねない。",
     "画面端の余白は 28dp、区切り線は `HorizontalDivider`／`VerticalDivider`（`dividerLine` を読む）を使う。この項目は上記 Material 3 の余白と区切り線の指示を置き換える。",
+    "下の「各部品のスタイル」にある各項目の寸法・形状・余白は Material 3 版の説明です。Miuix ではこの節を優先し、各部品の寸法・形状・余白は Miuix の `*Defaults` から取ります。",
   ],
   en: [
     "Build the UI on Miuix (`top.yukonga.miuix.kmp` — the `miuix-ui`, `miuix-preference`, `miuix-icons`, `miuix-blur` and `miuix-nav` artifacts, version 0.9.4) instead of `androidx.compose.material3`. Every component, shape and metric comes from that library; do not redraw a part it already provides.",
@@ -1471,6 +1499,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "Overlay layers (`OverlayDialog`, `OverlayBottomSheet`, `OverlayListPopup`) need a `Scaffold` ancestor; the window ones (`WindowDialog`, `WindowBottomSheet`, `WindowListPopup`) do not. `Scaffold` is also where the `floatingToolbar` slot lives.",
     "Miuix brings its own press feedback — a scale plus a full-size press overlay — through `LocalIndication` inside `MiuixTheme`. Do not add Material ripples on top of it.",
     "Screen margins are 28dp, and dividers are `HorizontalDivider` / `VerticalDivider`, which read `dividerLine`. This replaces the Material 3 spacing and divider guidance above.",
+    "The per-part entries under 'Component styles' below describe the Material 3 versions. Under Miuix this section wins: take each part's size, shape and padding from Miuix's own `*Defaults`.",
   ],
   zh: [
     "界面用 Miuix（`top.yukonga.miuix.kmp`，即 `miuix-ui`、`miuix-preference`、`miuix-icons`、`miuix-blur`、`miuix-nav` 构件，版本 0.9.4）实现，不要用 `androidx.compose.material3`。组件、形状和尺寸都取自这个库，库里已有的构件不要自己画。",
@@ -1483,6 +1512,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "浮层组件（`OverlayDialog`、`OverlayBottomSheet`、`OverlayListPopup`）需要 `Scaffold` 作为祖先；独立窗口的那几个（`WindowDialog`、`WindowBottomSheet`、`WindowListPopup`）不需要。`Scaffold` 也是 `floatingToolbar` 槽所在的位置。",
     "Miuix 在 `MiuixTheme` 里通过 `LocalIndication` 自带按压反馈（缩放 + 全尺寸按压遮罩），不要再叠 Material 的涟漪。",
     "屏幕边缘留 28dp，分隔线用 `HorizontalDivider` / `VerticalDivider`（读取 `dividerLine`）。这一条取代上面 Material 3 的间距和分隔线说明。",
+    "下面「各组件的样式」里逐条的尺寸、形状与内边距描述的是 Material 3 版本。在 Miuix 下以本节为准：各部件的尺寸、形状与内边距一律取 Miuix 的 `*Defaults`。",
   ],
   ko: [
     "UI는 Miuix(`top.yukonga.miuix.kmp`, 즉 `miuix-ui`/`miuix-preference`/`miuix-icons`/`miuix-blur`/`miuix-nav` 아티팩트, 버전 0.9.4)로 구현하고 `androidx.compose.material3`는 쓰지 않는다. 컴포넌트와 모양과 치수는 모두 이 라이브러리에서 가져오고, 이미 있는 부품을 직접 그리지 않는다.",
@@ -1495,6 +1525,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "오버레이 계열(`OverlayDialog`, `OverlayBottomSheet`, `OverlayListPopup`)은 `Scaffold` 조상이 필요하고, 독립 창 계열(`WindowDialog`, `WindowBottomSheet`, `WindowListPopup`)은 필요 없다. `Scaffold`는 `floatingToolbar` 슬롯이 있는 곳이기도 하다.",
     "Miuix는 `MiuixTheme` 안에서 `LocalIndication`을 통해 자체 누름 피드백(축소 + 전체 크기 누름 오버레이)을 제공한다. Material 리플을 겹쳐 넣지 않는다.",
     "화면 가장자리는 28dp, 구분선은 `HorizontalDivider`/`VerticalDivider`(`dividerLine`을 읽음)를 쓴다. 이 항목이 위 Material 3의 간격과 구분선 지침을 대체한다.",
+    "아래 '부품별 스타일'의 각 항목에 적힌 크기·모양·여백은 Material 3 기준 설명이다. Miuix에서는 이 절이 우선하며 각 부품의 크기·모양·여백은 Miuix의 `*Defaults`에서 가져온다.",
   ],
 };
 
@@ -1594,7 +1625,7 @@ const sizeLabel = (f: Frame, vp: Viewport, lang: Lang): string | undefined => {
 const PH = {
   ja: {
     screen: "画面",
-    intro: (title: string, brief: string) => `${title}を Material 3 Expressive のデザインで実装してください。${brief ? trimEnd(brief) + "。" : ""}`,
+    intro: (title: string, brief: string, pl: Platform = "android") => `${title}を ${pl === "miuix" ? "Miuix（HyperOS）" : "Material 3 Expressive"} のデザインで実装してください。${brief ? trimEnd(brief) + "。" : ""}`,
     titleOnly: (name: string) => `${name}画面`,
     titleAll: (n: number) => (n > 1 ? "このアプリ" : "この画面"),
     target: (vp: Viewport, pl: Platform, dark: boolean, both: boolean) =>
@@ -1644,7 +1675,7 @@ const PH = {
   },
   en: {
     screen: "screen",
-    intro: (title: string, brief: string) => `Please implement ${title} in the Material 3 Expressive design language.${brief ? ` ${trimEnd(brief)}.` : ""}`,
+    intro: (title: string, brief: string, pl: Platform = "android") => `Please implement ${title} in the ${pl === "miuix" ? "Miuix (HyperOS)" : "Material 3 Expressive"} design language.${brief ? ` ${trimEnd(brief)}.` : ""}`,
     titleOnly: (name: string) => `the ${name} screen`,
     titleAll: (n: number) => (n > 1 ? "this app" : "this screen"),
     target: (vp: Viewport, pl: Platform, dark: boolean, both: boolean) =>
@@ -1694,7 +1725,7 @@ const PH = {
   },
   zh: {
     screen: "屏幕",
-    intro: (title: string, brief: string) => `请用 Material 3 Expressive 的设计实现${title}。${brief ? trimEnd(brief) + "。" : ""}`,
+    intro: (title: string, brief: string, pl: Platform = "android") => `请用 ${pl === "miuix" ? "Miuix（HyperOS）" : "Material 3 Expressive"} 的设计实现${title}。${brief ? trimEnd(brief) + "。" : ""}`,
     titleOnly: (name: string) => `${name}屏幕`,
     titleAll: (n: number) => (n > 1 ? "这个应用" : "这个屏幕"),
     target: (vp: Viewport, pl: Platform, dark: boolean, both: boolean) =>
@@ -1744,7 +1775,7 @@ const PH = {
   },
   ko: {
     screen: "화면",
-    intro: (title: string, brief: string) => `Material 3 Expressive 디자인으로 구현해 주세요: ${title}.${brief ? ` ${trimEnd(brief)}.` : ""}`,
+    intro: (title: string, brief: string, pl: Platform = "android") => `${pl === "miuix" ? "Miuix(HyperOS)" : "Material 3 Expressive"} 디자인으로 구현해 주세요: ${title}.${brief ? ` ${trimEnd(brief)}.` : ""}`,
     titleOnly: (name: string) => `${name} 화면`,
     titleAll: (n: number) => (n > 1 ? "이 앱" : "이 화면"),
     target: (vp: Viewport, pl: Platform, dark: boolean, both: boolean) => `${vp === "phone" ? "세로형 휴대전화 화면(412×892dp)을 대상으로 하며" : vp === "desktop" ? `${pl === "web" ? "데스크톱 브라우저" : "가로형 태블릿"} 화면(1280×800 기준)을 대상으로 하며` : vp === "mixed" ? `세로형 휴대전화(412×892)와 ${pl === "web" ? "데스크톱 브라우저" : "가로형 태블릿"}(1280×800)을 모두 지원하며, 이름이 같은 화면은 서로 다른 너비의 동일한 화면이므로 반응형으로 구현하고` : "레이아웃은 자유 배치이며"}, ${both ? "라이트 모드와 다크 모드를 모두 지원하고 기기의 시스템 설정을 따른다" : `${dark ? "다크" : "라이트"} 모드만 지원한다`}.`,
@@ -1895,7 +1926,7 @@ export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameI
     .filter((s): s is string => !!s);
 
   const title = only ? ph.titleOnly(q(only.name || ph.screen)) : doc.title.trim() || ph.titleAll(frames.length);
-  lines.push(ph.intro(title, doc.brief.trim()));
+  lines.push(ph.intro(title, doc.brief.trim(), platform));
   lines.push(ph.target(viewport, platform, th.dark, th.bothModes));
   lines.push(ph.platform(platform));
   /* Miuix is not a Material theme: its components, roles and metrics all differ, so its rules are
@@ -1926,7 +1957,7 @@ export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameI
 
   lines.push("");
   lines.push(ph.hTheme);
-  lines.push(...themeLines(th, lang));
+  lines.push(...themeLines(th, lang, platform));
 
   lines.push("");
   lines.push(ph.hLayout);
