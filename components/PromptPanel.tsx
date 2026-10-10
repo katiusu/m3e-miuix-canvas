@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PromptMark, buildPrompt, promptMarks } from "@/lib/prompt";
-import { Doc, Palette, Platform, defaultPlatformOf } from "@/lib/tokens";
+import { DesignSystem, Doc, Palette, Platform, defaultPlatformOf } from "@/lib/tokens";
 import { Icon } from "./M3Node";
 import { Field, IconBtn, Segmented } from "./ui";
 import { t, useLang } from "@/lib/i18n";
@@ -307,12 +307,15 @@ export function PromptPanel({
   widths,
   palette: p,
   onDoc,
+  onDesign,
   onCover,
 }: {
   doc: Doc;
   widths: Record<string, number>;
   palette: Palette;
   onDoc: (patch: Partial<Doc>) => void;
+  /** 这个面板与「设计语言」页共用同一个开关：选 Miuix 等于把设计语言切到 Miuix */
+  onDesign: (design: DesignSystem) => void;
   /** told when the full-screen cover has opened, and when it starts to close */
   onCover?: (up: boolean) => void;
 }) {
@@ -435,6 +438,10 @@ export function PromptPanel({
     setLit(i);
     setJump((n) => n + 1);
   };
+  /* 设计语言是总开关，所以这里直接读写它：在这儿选 Miuix 就是把设计语言切成 Miuix，
+     选 Android 或 Web 则回到 Material 3（Miuix 只面向 Android，没有 Web 目标）。 */
+  const design = doc.theme?.design === "miuix" ? "miuix" : "m3";
+  const target: Platform = design === "miuix" ? "miuix" : doc.platform ?? defaultPlatformOf(doc.frames, doc.frame);
   const platform = (
     <Segmented<Platform>
       options={[
@@ -442,8 +449,11 @@ export function PromptPanel({
         { key: "web", icon: "language", label: "Web", title: t("targetWeb", lang) },
         { key: "miuix", icon: "widgets", label: "Miuix", title: t("targetMiuix", lang) },
       ]}
-      value={doc.platform ?? defaultPlatformOf(doc.frames, doc.frame)}
-      onChange={(platform) => onDoc({ platform })}
+      value={target}
+      onChange={(next) => {
+        onDesign(next === "miuix" ? "miuix" : "m3");
+        if (next !== "miuix") onDoc({ platform: next });
+      }}
       p={p}
       height={40}
     />

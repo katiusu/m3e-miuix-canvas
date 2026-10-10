@@ -21,9 +21,13 @@ import {
   SPLIT_MENU_SHEET_GAP,
   SPLIT_MENU_SLOT,
   STATUS_BAR_H,
+  switchTrackOf,
   baseRadii,
   buttonHeightOf,
   chipHeightOf,
+  controlHeightOf,
+  controlRadiusOf,
+  controlWidthOf,
   chipMetrics,
   extendedFabHeight,
   extendedFabMetrics,
@@ -58,6 +62,8 @@ import {
   RAIL_ITEM_H,
   RAIL_GAP,
   isWideRail,
+  labelFontOf,
+  labelPadXOf,
   railMetrics,
   isScrollableTabs,
   tabScrollOffset,
@@ -341,15 +347,16 @@ function SwitchContent({ item, p }: { item: Item; p: Palette }) {
   );
 }
 
-/** the M3 switch track and handle, 52 × 32 */
+/** the switch track and handle: M3's 52 x 32, Miuix's 49 x 28 (Switch.kt:87,143,156) */
 function SwitchControl({ on, p }: { on: boolean; p: Palette }) {
+  const t = switchTrackOf();
   return (
     <span
         style={{
           position: "relative",
-          width: 52,
-          height: 32,
-          borderRadius: 16,
+          width: t.w,
+          height: t.h,
+          borderRadius: t.r,
           background: on ? p.primary : p.surfaceContainerHighest,
           border: on ? "2px solid transparent" : `2px solid ${p.outline}`,
           boxSizing: "border-box",
@@ -361,11 +368,11 @@ function SwitchControl({ on, p }: { on: boolean; p: Palette }) {
           style={{
             position: "absolute",
             top: "50%",
-            left: on ? 22 : 4,
-            width: on ? 24 : 16,
-            height: on ? 24 : 16,
-            marginTop: on ? -12 : -8,
-            borderRadius: 12,
+            left: on ? t.onX : t.offX,
+            width: on ? t.onThumb : t.offThumb,
+            height: on ? t.onThumb : t.offThumb,
+            marginTop: on ? -t.onThumb / 2 : -t.offThumb / 2,
+            borderRadius: on ? t.onThumb / 2 : t.offThumb / 2,
             background: on ? p.onPrimary : p.outline,
             display: "grid",
             placeItems: "center",
@@ -382,14 +389,16 @@ function SwitchControl({ on, p }: { on: boolean; p: Palette }) {
 function CheckboxContent({ item, p }: { item: Item; p: Palette }) {
   const on = !!item.checked;
   const hasLabel = item.label.trim().length > 0;
+  /* the built box: 18dp in M3, 26dp in Miuix (Checkbox.kt:173), each inside its own 40dp touch box */
+  const ctl = controlWidthOf("checkbox", 18);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 40, whiteSpace: "nowrap" }}>
       <span style={{ width: 40, height: 40, display: "grid", placeItems: "center", flex: "0 0 auto" }}>
         <span
           style={{
-            width: 18,
-            height: 18,
-            borderRadius: 3,
+            width: ctl,
+            height: ctl,
+            borderRadius: controlRadiusOf("checkbox", 3),
             boxSizing: "border-box",
             border: on ? "none" : `2px solid ${p.onSurfaceVariant}`,
             background: on ? p.primary : "transparent",
@@ -605,21 +614,24 @@ function SplitMenuContent({ item, p, shown = true }: { item: Item; p: Palette; s
 function RadioContent({ item, p }: { item: Item; p: Palette }) {
   const on = !!item.checked;
   const hasLabel = item.label.trim().length > 0;
+  /* the ring: 20dp in M3, 26dp in Miuix (RadioButton.kt:121), each inside its own 40dp touch box */
+  const ctl = controlWidthOf("radio", 20);
+  const dot = Math.round(ctl / 2);
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 40, whiteSpace: "nowrap" }}>
       <span style={{ width: 40, height: 40, display: "grid", placeItems: "center", flex: "0 0 auto" }}>
         <span
           style={{
-            width: 20,
-            height: 20,
-            borderRadius: 10,
+            width: ctl,
+            height: ctl,
+            borderRadius: controlRadiusOf("radio", 10),
             boxSizing: "border-box",
             border: `2px solid ${on ? p.primary : p.onSurfaceVariant}`,
             display: "grid",
             placeItems: "center",
           }}
         >
-          {on && <span style={{ width: 10, height: 10, borderRadius: 5, background: p.primary }} />}
+          {on && <span style={{ width: dot, height: dot, borderRadius: dot / 2, background: p.primary }} />}
         </span>
       </span>
       {hasLabel && <span style={{ fontSize: 16, color: p.onSurface, paddingRight: 8 }}>{item.label}</span>}
@@ -923,6 +935,9 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
       /* the small bar keeps its title between the icons; the medium and large ones let it down
          onto a line of its own at the foot, the way M3's flexible bars do */
       const barH = topBarHeightOf(item);
+      /* the icon row is the small bar's height: a taller M3 bar pushes its title onto a second line
+         instead of growing this row, while Miuix's single 52dp bar makes the row that height. */
+      const rowH = Math.min(barH, TOP_BAR_SIZES[0].h);
       const tall = barH > TOP_BAR_SIZES[0].h;
       const font = topBarFontOf(item);
       return (
@@ -937,7 +952,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
             position: "relative",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 4px", height: 64, flex: "0 0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 4px", height: rowH, flex: "0 0 auto" }}>
             <div style={{ width: 48, height: 48, display: "grid", placeItems: "center", flex: "0 0 auto" }}>
               {item.icon && <Icon name={item.icon} size={24} color={p.onSurface} />}
             </div>
@@ -959,9 +974,9 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
 
     case "searchBar":
       return (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 16px", height: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: `0 ${labelPadXOf("searchBar", 16)}px`, height: "100%" }}>
           {item.icon && <Icon name={item.icon} size={24} color={p.onSurface} />}
-          <div style={{ flex: 1, minWidth: 0, fontSize: 16, color: p.onSurfaceVariant, ...ellipsis }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: labelFontOf("searchBar", 16), color: p.onSurfaceVariant, ...ellipsis }}>
             {item.label}
           </div>
           {item.icon2 && <Icon name={item.icon2} size={24} color={p.onSurfaceVariant} />}
@@ -1053,7 +1068,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
     case "listItem": {
       const iconBg = item.iconFill === "none" ? null : (item.iconFill ?? "primaryContainer");
       return (
-        <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "0 16px", height: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, padding: `0 ${labelPadXOf("listItem", 16)}px`, height: "100%" }}>
           {item.icon && (
             <div
               style={{
@@ -1071,7 +1086,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            {hasLabel && <div style={{ fontSize: 16, color: p.onSurface, ...ellipsis }}>{item.label}</div>}
+            {hasLabel && <div style={{ fontSize: labelFontOf("listItem", 16), color: p.onSurface, ...ellipsis }}>{item.label}</div>}
             {hasSupporting && (
               <div style={{ fontSize: 13, color: p.onSurfaceVariant, ...ellipsis }}>{item.supporting}</div>
             )}
@@ -1140,7 +1155,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
     case "snackbar":
       return (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 8px 0 16px", height: "100%" }}>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 14, color: p.inverseOnSurface, ...ellipsis }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: labelFontOf("snackbar", 14), color: p.inverseOnSurface, ...ellipsis }}>
             {item.label}
           </div>
           {hasSupporting && (
@@ -1476,7 +1491,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
                 {withLabel && (
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: labelFontOf("navRail", 11),
                       fontWeight: on ? w(600, 700) : w(400, 500),
                       color: on ? p.onSurface : p.onSurfaceVariant,
                       maxWidth: "100%",
@@ -1539,7 +1554,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
                 {withLabel && (
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: labelFontOf("bottomNav", 11),
                       fontWeight: on ? w(600, 700) : w(400, 500),
                       color: on ? p.onSurface : p.onSurfaceVariant,
                       maxWidth: "100%",
@@ -1636,7 +1651,7 @@ function Body({ item, p, tabScroll, menuShown }: { item: Item; p: Palette; tabSc
               >
                 <span
                   style={{
-                    fontSize: 14,
+                    fontSize: labelFontOf("tabs", 14),
                     fontWeight: w(500, 700),
                     color: on ? p.primary : p.onSurfaceVariant,
                     padding: "0 4px 14px",

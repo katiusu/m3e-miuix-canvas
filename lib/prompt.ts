@@ -1,4 +1,5 @@
 import { KIND_TEXT, Lang, SWIPE_TEXT, TRANSITION_TEXT, getLang } from "./i18n";
+import { STYLE_NOTES_MIUIX } from "./miuixNotes";
 import { constrainModalRails } from "./rail";
 import {
   CONTENT_W,
@@ -1486,7 +1487,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "オーバーレイ系（`OverlayDialog`、`OverlayBottomSheet`、`OverlayListPopup`）は `Scaffold` の祖先が必要で、独立ウィンドウ系（`WindowDialog`、`WindowBottomSheet`、`WindowListPopup`）は不要。`Scaffold` は `floatingToolbar` スロットの置き場所でもある。",
     "Miuix は `MiuixTheme` 内で `LocalIndication` を通じて独自の押下フィードバック（縮小＋全面の押下オーバーレイ）を提供する。Material のリップルを重ねない。",
     "画面端の余白は 28dp、区切り線は `HorizontalDivider`／`VerticalDivider`（`dividerLine` を読む）を使う。この項目は上記 Material 3 の余白と区切り線の指示を置き換える。",
-    "下の「各部品のスタイル」にある各項目の寸法・形状・余白は Material 3 版の説明です。Miuix ではこの節を優先し、各部品の寸法・形状・余白は Miuix の `*Defaults` から取ります。",
+    "下の「各部品のスタイル」にある各項目は Material 3 版の説明です。Miuix ではその一つ一つを Miuix 版の説明が置き換え、どのコンポーネントのどの `*Defaults` から取るのかを明記します。",
   ],
   en: [
     "Build the UI on Miuix (`top.yukonga.miuix.kmp` — the `miuix-ui`, `miuix-preference`, `miuix-icons`, `miuix-blur` and `miuix-nav` artifacts, version 0.9.4) instead of `androidx.compose.material3`. Every component, shape and metric comes from that library; do not redraw a part it already provides.",
@@ -1499,7 +1500,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "Overlay layers (`OverlayDialog`, `OverlayBottomSheet`, `OverlayListPopup`) need a `Scaffold` ancestor; the window ones (`WindowDialog`, `WindowBottomSheet`, `WindowListPopup`) do not. `Scaffold` is also where the `floatingToolbar` slot lives.",
     "Miuix brings its own press feedback — a scale plus a full-size press overlay — through `LocalIndication` inside `MiuixTheme`. Do not add Material ripples on top of it.",
     "Screen margins are 28dp, and dividers are `HorizontalDivider` / `VerticalDivider`, which read `dividerLine`. This replaces the Material 3 spacing and divider guidance above.",
-    "The per-part entries under 'Component styles' below describe the Material 3 versions. Under Miuix this section wins: take each part's size, shape and padding from Miuix's own `*Defaults`.",
+    "The per-part entries under 'Component styles' below are the Material 3 versions. Under Miuix each one is replaced by its Miuix counterpart, which names the component and the `*Defaults` field the numbers come from.",
   ],
   zh: [
     "界面用 Miuix（`top.yukonga.miuix.kmp`，即 `miuix-ui`、`miuix-preference`、`miuix-icons`、`miuix-blur`、`miuix-nav` 构件，版本 0.9.4）实现，不要用 `androidx.compose.material3`。组件、形状和尺寸都取自这个库，库里已有的构件不要自己画。",
@@ -1512,7 +1513,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "浮层组件（`OverlayDialog`、`OverlayBottomSheet`、`OverlayListPopup`）需要 `Scaffold` 作为祖先；独立窗口的那几个（`WindowDialog`、`WindowBottomSheet`、`WindowListPopup`）不需要。`Scaffold` 也是 `floatingToolbar` 槽所在的位置。",
     "Miuix 在 `MiuixTheme` 里通过 `LocalIndication` 自带按压反馈（缩放 + 全尺寸按压遮罩），不要再叠 Material 的涟漪。",
     "屏幕边缘留 28dp，分隔线用 `HorizontalDivider` / `VerticalDivider`（读取 `dividerLine`）。这一条取代上面 Material 3 的间距和分隔线说明。",
-    "下面「各组件的样式」里逐条的尺寸、形状与内边距描述的是 Material 3 版本。在 Miuix 下以本节为准：各部件的尺寸、形状与内边距一律取 Miuix 的 `*Defaults`。",
+    "下面「各组件的样式」里逐条描述的是 Material 3 版本；在 Miuix 下，每一条都由对应的 Miuix 版本取代，并写明它取自哪个构件、哪个 `*Defaults` 字段。",
   ],
   ko: [
     "UI는 Miuix(`top.yukonga.miuix.kmp`, 즉 `miuix-ui`/`miuix-preference`/`miuix-icons`/`miuix-blur`/`miuix-nav` 아티팩트, 버전 0.9.4)로 구현하고 `androidx.compose.material3`는 쓰지 않는다. 컴포넌트와 모양과 치수는 모두 이 라이브러리에서 가져오고, 이미 있는 부품을 직접 그리지 않는다.",
@@ -1525,7 +1526,7 @@ const MIUIX_NOTES: Record<Lang, string[]> = {
     "오버레이 계열(`OverlayDialog`, `OverlayBottomSheet`, `OverlayListPopup`)은 `Scaffold` 조상이 필요하고, 독립 창 계열(`WindowDialog`, `WindowBottomSheet`, `WindowListPopup`)은 필요 없다. `Scaffold`는 `floatingToolbar` 슬롯이 있는 곳이기도 하다.",
     "Miuix는 `MiuixTheme` 안에서 `LocalIndication`을 통해 자체 누름 피드백(축소 + 전체 크기 누름 오버레이)을 제공한다. Material 리플을 겹쳐 넣지 않는다.",
     "화면 가장자리는 28dp, 구분선은 `HorizontalDivider`/`VerticalDivider`(`dividerLine`을 읽음)를 쓴다. 이 항목이 위 Material 3의 간격과 구분선 지침을 대체한다.",
-    "아래 '부품별 스타일'의 각 항목에 적힌 크기·모양·여백은 Material 3 기준 설명이다. Miuix에서는 이 절이 우선하며 각 부품의 크기·모양·여백은 Miuix의 `*Defaults`에서 가져온다.",
+    "아래 '부품별 스타일'의 각 항목은 Material 3 기준 설명이며, Miuix에서는 각 항목이 해당 Miuix 설명으로 대체된다. 그 설명은 어떤 컴포넌트의 어떤 `*Defaults` 필드에서 온 값인지 밝힌다.",
   ],
 };
 
@@ -1669,7 +1670,11 @@ const PH = {
     freeform: "画面を上から順に説明します。",
     hBehavior: "## 振る舞いと画面遷移",
     hStyle: "## 各部品のスタイル",
-    styleIntro: "使っている部品ごとの目安です。数値は M3 Expressive の標準値なので、標準コンポーネントで実現できるものは標準に任せ、内容に合わせて調整して構いません。",
+    /* the numbers below are Miuix's under Miuix, so the sentence that frames them has to move too */
+    styleIntro: (pl: Platform) =>
+      pl === "miuix"
+        ? "使っている部品ごとの目安です。Miuix では各項目が Miuix 自身のコンポーネントと、その `*Defaults` から取る値を示します。数値は手で書かず、コンポーネントに任せてください。"
+        : "使っている部品ごとの目安です。数値は M3 Expressive の標準値なので、標準コンポーネントで実現できるものは標準に任せ、内容に合わせて調整して構いません。",
     hGeneral: "## 全体の指針",
     hMiuix: "## Miuix（HyperOS）",
   },
@@ -1719,7 +1724,10 @@ const PH = {
     freeform: "The screen, from top to bottom:",
     hBehavior: "## Behavior and navigation",
     hStyle: "## Component styles",
-    styleIntro: "Per-component guidance for the parts in use. The numbers are the M3 Expressive defaults: let the standard components handle whatever they already do, and adjust where the content calls for it.",
+    styleIntro: (pl: Platform) =>
+      pl === "miuix"
+        ? "Per-component guidance for the parts in use. Under Miuix each entry names the Miuix component and the `*Defaults` value it takes; do not write the numbers by hand — let the component supply them."
+        : "Per-component guidance for the parts in use. The numbers are the M3 Expressive defaults: let the standard components handle whatever they already do, and adjust where the content calls for it.",
     hGeneral: "## General guidance",
     hMiuix: "## Miuix (HyperOS)",
   },
@@ -1769,7 +1777,10 @@ const PH = {
     freeform: "从上到下说明屏幕内容：",
     hBehavior: "## 行为与屏幕跳转",
     hStyle: "## 各组件的样式",
-    styleIntro: "以下是所用组件的参考。数值均为 M3 Expressive 的标准值，能用标准组件实现的就交给标准组件，并可根据内容适当调整。",
+    styleIntro: (pl: Platform) =>
+      pl === "miuix"
+        ? "以下是所用组件的参考。在 Miuix 下，每一条都指明对应的 Miuix 构件以及取自它 `*Defaults` 的数值；不要手写这些数值，交给构件本身。"
+        : "以下是所用组件的参考。数值均为 M3 Expressive 的标准值，能用标准组件实现的就交给标准组件，并可根据内容适当调整。",
     hGeneral: "## 整体原则",
     hMiuix: "## Miuix（HyperOS）",
   },
@@ -1807,7 +1818,10 @@ const PH = {
     freeform: "화면을 위에서부터 설명합니다.",
     hBehavior: "## 동작 및 화면 전환",
     hStyle: "## 부품별 스타일",
-    styleIntro: "사용된 부품별 지침입니다. 수치는 M3 Expressive 기본값이며 표준 컴포넌트가 제공하는 동작은 그대로 사용하고 내용에 맞게 조정할 수 있습니다.",
+    styleIntro: (pl: Platform) =>
+      pl === "miuix"
+        ? "사용된 부품별 지침입니다. Miuix에서는 각 항목이 해당 Miuix 컴포넌트와 그 `*Defaults`에서 가져오는 값을 밝힙니다. 수치를 직접 쓰지 말고 컴포넌트가 제공하게 하십시오."
+        : "사용된 부품별 지침입니다. 수치는 M3 Expressive 기본값이며 표준 컴포넌트가 제공하는 동작은 그대로 사용하고 내용에 맞게 조정할 수 있습니다.",
     hGeneral: "## 전체 지침",
     hMiuix: "## Miuix(HyperOS)",
   },
@@ -1883,10 +1897,13 @@ export function promptMarks(text: string, frames: Frame[], lang: Lang = getLang(
 export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameId?: string, lang: Lang = getLang()): string {
   doc = { ...doc, groups: constrainModalRails(doc.groups) };
   const th = normalizeTheme(doc.theme);
-  const platform: Platform = doc.platform ?? defaultPlatformOf(doc.frames, doc.frame);
-  /* asking for Miuix means asking for Miuix's own scheme, so the platform settles the design axis
-     as well — unless the author named a custom palette, which stays theirs. */
-  const themed: Theme = platform === "miuix" && !(doc.paletteKey === "custom" && doc.customPalette) ? { ...th, design: "miuix" } : th;
+  /* The design switch is the one switch, so it settles the target as well: choosing the Miuix
+   * scheme asks for a Miuix build. Choosing the target in the prompt panel settles the scheme the
+   * other way — that panel moves this same switch. A custom palette only decides the colours, so
+   * it never moves the design axis. */
+  const namedTarget: Platform = doc.platform ?? defaultPlatformOf(doc.frames, doc.frame);
+  const platform: Platform = th.design === "miuix" ? "miuix" : namedTarget;
+  const themed: Theme = platform === "miuix" ? { ...th, design: "miuix" } : th;
   const pal = paletteOf(doc.paletteKey, doc.customPalette, themed);
   const phone = doc.frame === "phone";
   const allFrames = phone ? doc.frames : [];
@@ -1921,8 +1938,15 @@ export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameI
         else legacyRail = true;
       }
     }
+  /* under Miuix every Material 3 entry below would describe the wrong part, so the Miuix table
+     stands in kind for kind instead of being read beside it */
+  const notesFor = platform === "miuix" ? STYLE_NOTES_MIUIX[lang] : STYLE_NOTES[lang];
   const styleNotes = kindsUsed
-    .map((k) => (k === "navRail" && wideRail ? `${legacyRail ? `${STYLE_NOTES[lang].navRail} ` : ""}${WIDE_RAIL_STYLE[lang]}` : (platform === "web" && STYLE_NOTES_WEB[lang][k]) || STYLE_NOTES[lang][k]))
+    .map((k) =>
+      k === "navRail" && wideRail && platform !== "miuix"
+        ? `${legacyRail ? `${notesFor.navRail} ` : ""}${WIDE_RAIL_STYLE[lang]}`
+        : (platform === "web" && STYLE_NOTES_WEB[lang][k]) || notesFor[k],
+    )
     .filter((s): s is string => !!s);
 
   const title = only ? ph.titleOnly(q(only.name || ph.screen)) : doc.title.trim() || ph.titleAll(frames.length);
@@ -1994,7 +2018,7 @@ export function buildPrompt(doc: Doc, widths: Record<string, number>, onlyFrameI
   if (styleNotes.length) {
     lines.push("");
     lines.push(ph.hStyle);
-    lines.push(ph.styleIntro);
+    lines.push(ph.styleIntro(platform));
     for (const s of styleNotes) lines.push(`- ${s}`);
   }
 

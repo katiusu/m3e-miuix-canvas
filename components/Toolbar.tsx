@@ -75,7 +75,6 @@ export function Toolbar({
   onAddFrame,
   onPreview,
   rightInset,
-  mobile,
   onPrompt,
   onSettings,
   onLangSheet,
@@ -110,7 +109,6 @@ export function Toolbar({
   onPreview: () => void;
   /** width of the open right panel, so the zoom pill slides out of its way */
   rightInset: number;
-  mobile?: boolean;
   onPrompt?: () => void;
   onSettings?: () => void;
   /** phone: open the language sheet instead of the menu */
@@ -136,55 +134,6 @@ export function Toolbar({
   quickUndo?: boolean;
 }) {
   const lang = useLang();
-  if (mobile) {
-    const S = 42;
-    return (
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: 10,
-          display: "flex",
-          justifyContent: "center",
-          pointerEvents: "none",
-          zIndex: 40,
-          padding: "0 8px",
-        }}
-      >
-        <Pill p={p}>
-          <IconBtn icon="undo" p={p} onClick={onUndo} disabled={!canUndo} title={t("undo", lang)} size={S} />
-          <IconBtn icon="redo" p={p} onClick={onRedo} disabled={!canRedo} title={t("redo", lang)} size={S} />
-          <IconBtn icon="translate" p={p} onClick={onLangSheet} title={t("language", lang)} size={S} />
-          <IconBtn icon="palette" p={p} onClick={onSettings} title={t("settings", lang)} size={S} />
-          <GitHubLink p={p} size={S} />
-          <button
-            onClick={onPrompt}
-            title={t("copyPrompt", lang)}
-            className="m3-press"
-            style={{
-              height: S,
-              padding: "0 14px 0 10px",
-              borderRadius: S / 2,
-              border: "none",
-              background: p.primary,
-              color: p.onPrimary,
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <Icon name="auto_awesome" size={22} />
-            {t("prompt", lang)}
-          </button>
-        </Pill>
-      </div>
-    );
-  }
   return (
     <>
       {/* notices sit just under the header pills so they are seen where the eye already is */}

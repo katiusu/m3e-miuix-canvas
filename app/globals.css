@@ -416,3 +416,24 @@ input.m3-number {
   }
 }
 
+
+/* ---- 窄窗口：展开的侧栏浮在画布之上，而不是把画布挤成零宽 ----
+   任何宽度下都不隐藏、不禁用任何东西：竖排图标栏照旧把每个面板放在一次点击之外，
+   变的只是画布能分到多少地方。展开时才浮起，收起时那 52px 的栏仍然占位不挡画布。 */
+@media (max-width: 900px) {
+  .m3-side-right,
+  .m3-side-left.m3-side-float {
+    position: absolute !important;
+    top: 0;
+    bottom: 0;
+    z-index: 30;
+    max-width: 92vw;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  }
+  .m3-side-right {
+    right: 0;
+  }
+  .m3-side-left.m3-side-float {
+    left: 0;
+  }
+}

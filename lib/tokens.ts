@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { FAB_MENU_TABS, KIND_TEXT, Lang, NAV_TABS, SPLIT_MENU_TABS, TAB_LABELS, getLang, t, SELECT_OPTIONS } from "./i18n";
 import { Contrast, isLightColor, schemeFromSeed } from "./color";
-import { MIUIX_DARK, MIUIX_FONT_FAMILY, MIUIX_LIGHT, miuixMetricOf } from "./miuix";
+import { MIUIX_DARK, MIUIX_FONT_FAMILY, MIUIX_LIGHT, MIUIX_RAIL_EXPANDED_W, MIUIX_RAIL_W, miuixMetricOf } from "./miuix";
 
 /* ---------- geometry ---------- */
 export const H = 56; // M3 medium button height (dp)
@@ -42,8 +42,46 @@ function onScale<T extends { h: number }>(steps: readonly T[], height: number) {
 /** what a button of this height is made of; between two named sizes the parts are mixed in proportion */
 export function buttonMetrics(height: number): ButtonMetrics {
   const s = onScale(BUTTON_SIZES, height);
-  return { h: s.h, padX: s.of((b) => b.padX), gap: s.of((b) => b.gap), icon: s.of((b) => b.icon), font: s.of((b) => b.font) };
+  const m: ButtonMetrics = { h: s.h, padX: s.of((b) => b.padX), gap: s.of((b) => b.gap), icon: s.of((b) => b.icon), font: s.of((b) => b.font) };
+  /* Miuix names the button's inside margin and its label itself instead of deriving them from the
+   * height, so where it names them they replace the M3 scale — the same way its box replaces it. */
+  if (curDesign === "miuix") {
+    const x = miuixMetricOf("button");
+    if (x?.padX !== undefined) m.padX = x.padX;
+    if (x?.font !== undefined) m.font = x.font;
+  }
+  return m;
 }
+
+/** The label size a part takes under the current design language. Miuix names one for the parts it
+ *  has (`MIUIX_TYPE`); where it names none, the M3 size stands. */
+export const labelFontOf = (kind: Kind, fallback: number): number =>
+  (curDesign === "miuix" ? miuixMetricOf(kind)?.font : undefined) ?? fallback;
+/** The horizontal inset a part keeps inside its box, on the same terms. */
+export const labelPadXOf = (kind: Kind, fallback: number): number =>
+  (curDesign === "miuix" ? miuixMetricOf(kind)?.padX : undefined) ?? fallback;
+
+/** The width of the control a part draws inside its own row — a switch track, a checkbox, a radio.
+ *  Miuix sizes these itself (Switch.kt:87, Checkbox.kt:173, RadioButton.kt:121), so the drawn
+ *  control follows the token while the labelled row around it keeps the box the canvas gave it. */
+export const controlWidthOf = (kind: Kind, fallback: number): number =>
+  (curDesign === "miuix" ? miuixMetricOf(kind)?.w : undefined) ?? fallback;
+/** the height of the same control */
+export const controlHeightOf = (kind: Kind, fallback: number): number =>
+  (curDesign === "miuix" ? miuixMetricOf(kind)?.h : undefined) ?? fallback;
+/** the corner of the same control */
+export const controlRadiusOf = (kind: Kind, fallback: number): number =>
+  (curDesign === "miuix" ? miuixMetricOf(kind)?.radius : undefined) ?? fallback;
+
+/**
+ * The switch, in both design languages. Miuix's track is 49 x 28 and holds a 20dp thumb that runs
+ * from 4 to 25dp (Switch.kt:87,143,156); M3's is 52 x 32 and its thumb grows to 24dp when it is on.
+ * Both are written out, because the M3 numbers are not derivable from the Miuix ones.
+ */
+export const switchTrackOf = (): { w: number; h: number; r: number; onThumb: number; offThumb: number; onX: number; offX: number } =>
+  curDesign === "miuix"
+    ? { w: 49, h: 28, r: 14, onThumb: 20, offThumb: 20, onX: 25, offX: 4 }
+    : { w: 52, h: 32, r: 16, onThumb: 24, offThumb: 16, onX: 22, offX: 4 };
 
 /** M3's chip sizes: the 32dp one it has always had, and the two roomier ones Expressive adds.
  *  A chip is as wide as its label makes it, so its height is the one measure it has.
@@ -151,9 +189,14 @@ export const RAIL_GAP = 12;
 export const RAIL_COLLAPSED_W = 96;
 export const RAIL_EXPANDED_W = 220;
 export const isWideRail = (it: Item) => it.railExpanded !== undefined || it.railModal === true;
-export const railWidth = (it: Item) => it.railExpanded ? RAIL_EXPANDED_W : isWideRail(it) ? RAIL_COLLAPSED_W : RAIL_W;
+export const railWidth = (it: Item) => {
+  /* Miuix's rail has two widths, 80 and 240 (NavigationRail.kt:603,606), where M3 has three. */
+  if (curDesign === "miuix") return it.railExpanded ? MIUIX_RAIL_EXPANDED_W : MIUIX_RAIL_W;
+  return it.railExpanded ? RAIL_EXPANDED_W : isWideRail(it) ? RAIL_COLLAPSED_W : RAIL_W;
+};
 /** Modal expansion overlays the body, retaining only the collapsed rail's layout slot. */
-export const railLayoutWidth = (it: Item) => it.railModal ? RAIL_COLLAPSED_W : railWidth(it);
+export const railLayoutWidth = (it: Item) =>
+  curDesign === "miuix" ? (it.railModal ? MIUIX_RAIL_W : railWidth(it)) : it.railModal ? RAIL_COLLAPSED_W : railWidth(it);
 /** Runtime-only expansion edge: copied by item edits, never included in JSON. */
 export const railExpansionSide = Symbol("railExpansionSide");
 /** Shared drawing / hit-area geometry. The header is a 48dp menu button with an 8dp gap. */
@@ -179,9 +222,20 @@ export const TOP_BAR_SIZES = [
   { key: "l", h: 152, font: 28 },
 ] as const;
 /** how tall the bar itself is, without the status bar it may carry */
-export const topBarHeightOf = (it: Item) => clamp(Math.round(it.size2 ?? TOP_BAR_SIZES[0].h), TOP_BAR_SIZES[0].h, TOP_BAR_SIZES[TOP_BAR_SIZES.length - 1].h);
+export const topBarHeightOf = (it: Item) => {
+  /* Miuix has one app bar — TopAppBarDefaults.CollapsedHeight 52 — and no flexible medium or large
+   * form (TopAppBar.kt:400). 52 sits below the M3 range on purpose, so it is returned before the
+   * clamp rather than through it, and only while the author has not asked for a height of their own. */
+  const miuix = curDesign === "miuix" && it.size2 === undefined ? miuixMetricOf("topAppBar")?.h : undefined;
+  if (miuix !== undefined) return miuix;
+  return clamp(Math.round(it.size2 ?? TOP_BAR_SIZES[0].h), TOP_BAR_SIZES[0].h, TOP_BAR_SIZES[TOP_BAR_SIZES.length - 1].h);
+};
 /** the title size the bar's height asks for: the named size it lands on, or the nearest below */
 export const topBarFontOf = (it: Item) => {
+  /* Miuix fixes the title at title3, 20sp (TopAppBar.kt:732), where the M3 path reads a size off the
+   * bar's height; the two disagree, so the token wins. */
+  const miuix = curDesign === "miuix" && it.size2 === undefined ? miuixMetricOf("topAppBar")?.font : undefined;
+  if (miuix !== undefined) return miuix;
   const h = topBarHeightOf(it);
   let font: number = TOP_BAR_SIZES[0].font;
   for (const b of TOP_BAR_SIZES) if (h >= b.h) font = b.font;
@@ -2484,7 +2538,9 @@ export function sizeOf(it: Item, widths: Record<string, number>) {
   const size = sizeOfM3(it, widths);
   if (curDesign !== "miuix") return size;
   const m = miuixMetricOf(it.kind);
-  if (!m || (m.w === undefined && m.h === undefined)) return size;
+  /* a control the part draws inside its own row keeps its M3 row box; only the control follows
+     Miuix (see `controlWidthOf`) */
+  if (!m || m.control || (m.w === undefined && m.h === undefined)) return size;
   const s = KIND_SPEC[it.kind];
   /* A value the author set themselves is never taken away: Miuix supplies defaults, not locks. */
   const setW = it.size !== undefined && it.size !== (s.defSize ?? s.w);
@@ -2588,7 +2644,7 @@ export function baseRadii(it: Item): Radii {
   const m = miuixMetricOf(it.kind);
   /* A metric radius is a spec and replaces the M3 formula, but a radius the author typed in — a
    * per-corner box, or a bar's own top/bottom pair — still wins. */
-  if (m?.radius === undefined || it.corners || it.radiusTop !== undefined || it.radiusBottom !== undefined) return r;
+  if (m?.control || m?.radius === undefined || it.corners || it.radiusTop !== undefined || it.radiusBottom !== undefined) return r;
   return uniformRadii(scaleR(m.radius));
 }
 

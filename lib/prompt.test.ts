@@ -354,8 +354,32 @@ describe("buildPrompt for the Miuix platform", () => {
     expect(theme).not.toContain("MotionScheme.standard");
   });
 
-  it("gives the Miuix notes precedence over the Material 3 per-part notes", () => {
-    expect(build("en", "miuix")).toContain("this section wins");
+  it("describes every part in the style section with Miuix's own numbers", () => {
+    const miuix = styleBullets(build("en", "miuix"), "en").join("\n");
+    expect(miuix).toContain("TopAppBarDefaults");
+    expect(miuix).toContain("ButtonDefaults");
+    expect(miuix).toContain("NavigationBarDefaults");
+    /* the Material 3 numbers for the same three parts must not survive beside them */
+    expect(miuix).not.toContain("M3 Expressive");
+    expect(miuix).not.toContain("64dp tall on surface");
+    expect(miuix).not.toContain("56dp tall, fully rounded");
+  });
+
+  it.each(LANGS)("frames the style section with Miuix's own numbers in %s", (lang) => {
+    const ls = lines(build(lang, "miuix"));
+    const intro = ls[ls.indexOf(SECTIONS[lang][4]) + 1];
+    expect(intro).toContain("Miuix");
+    expect(intro).not.toContain("M3 Expressive");
+  });
+
+  it("keeps the Miuix rail note when the rail is expanded", () => {
+    const rail: Item = { ...makeItem("navRail"), id: "rail", label: "Home", railExpanded: true };
+    const miuix = styleBullets(build("en", "miuix", [rail]), "en").join("\n");
+    expect(miuix).toContain("NavigationRailDefaults");
+    expect(miuix).toContain("240dp");
+    /* the wide-rail wording Material 3 needs describes 96dp/220dp and would be wrong here */
+    expect(miuix).not.toContain("M3 Expressive navigation rail");
+    expect(miuix).not.toContain("220dp");
   });
 
   it("leaves every other platform on its Material 3 wording", () => {
@@ -364,6 +388,12 @@ describe("buildPrompt for the Miuix platform", () => {
     expect(prompt).not.toContain("Miuix");
     expect(prompt).not.toContain("onSurfaceVariantSummary");
     expect(headings(prompt)).toEqual(SECTIONS.en);
+    /* the same section, still framed and written the Material 3 way */
+    const ls = lines(prompt);
+    expect(ls[ls.indexOf(SECTIONS.en[4]) + 1]).toContain("M3 Expressive defaults");
+    const style = styleBullets(prompt, "en").join("\n");
+    expect(style).toContain("56dp tall");
+    expect(style).not.toContain("ButtonDefaults");
   });
 });
 

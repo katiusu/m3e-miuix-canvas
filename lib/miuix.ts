@@ -224,6 +224,10 @@ export const MIUIX_FONT_FAMILY = "'MiSans VF', MiSans, 'HarmonyOS Sans SC', syst
  *  little less per row than an M3 one. */
 export const MIUIX_PAGE_MARGIN = 28;
 
+/** NavigationRailDefaults: MinWidth 80 collapsed, ExpandedWidth 240 expanded (NavigationRail.kt:603,606) */
+export const MIUIX_RAIL_W = 80;
+export const MIUIX_RAIL_EXPANDED_W = 240;
+
 /* ---------------------------------------------------------------- squircle */
 
 /**
@@ -309,6 +313,13 @@ export type MiuixMetric = {
    * adds the inset the same way the Material 3 path does.
    */
   inset?: "status" | "nav";
+  /**
+   * The size and the corner below belong to the *control the part draws inside its own row*, not to
+   * the box around it. The canvas draws a switch, a checkbox and a radio as a labelled row, so a
+   * Miuix control size must not collapse that row: `sizeOf` and `baseRadii` leave such a part alone
+   * and the drawn control reads the token itself.
+   */
+  control?: true;
 };
 
 /**
@@ -342,7 +353,7 @@ export const MIUIX_METRICS: Partial<Record<Kind, MiuixMetric>> = {
   card: { radius: 16 },
   /** a 49x28 track holding a 20dp thumb, both capsules; the thumb travels x 4->25dp,
    *  `spring(dampingRatio = 0.7f, stiffness = 987f)` (Switch.kt:87,143,156) */
-  switch: { w: 49, h: 28, radius: 14 },
+  switch: { w: 49, h: 28, radius: 14, control: true },
   /** TopAppBarDefaults: CollapsedHeight 52, TitlePadding 26 (TopAppBar.kt:400,406) */
   topAppBar: { h: 52, padX: 26, font: MIUIX_TYPE.title3, inset: "status" },
   /** NavigationBarDefaults: ItemHeight 64, IconSize 26, LabelFontSize 12; items are `weight(1f)`
@@ -369,7 +380,74 @@ export const MIUIX_METRICS: Partial<Record<Kind, MiuixMetric>> = {
   bottomSheet: { radius: 28 },
   /** SnackbarDefaults.CornerRadius 16 (Snackbar.kt:497); its action pill is a separate 50dp */
   snackbar: { radius: 16, font: MIUIX_TYPE.body2 },
+  /** Miuix's FAB is icon-only — FloatingActionButtonDefaults names a 60dp box and no extended form
+   *  at all (FloatingActionButton.kt:69,72) — so an extended FAB is that same box, which takes a
+   *  label because the composable accepts arbitrary content. The height and the half-height radius
+   *  are Miuix's; the label inset is the button's InsideMargin, since there is no FAB one. */
+  extendedFab: { h: 60, radius: 30, padX: 16, font: MIUIX_TYPE.button },
+  /** Miuix has no split button. The honest stand-in is two Buttons inside a Surface, so the part
+   *  wears ButtonDefaults' own 40dp box and 16dp corner (Button.kt:158,169) and the capsule look
+   *  M3 gives a split button is dropped rather than invented. */
+  splitButton: { h: 40, radius: 16, padX: 16, font: MIUIX_TYPE.button },
+  /** Miuix has no chip either. A chip is drawn as a Button at its minimum, so it takes the same
+   *  box, corner and label. These numbers are Button's, borrowed — not a Miuix chip token. */
+  chip: { h: 40, radius: 16, padX: 16, font: MIUIX_TYPE.button },
+  /** Miuix has no FAB menu. The menu it opens is a `ListPopup`/`Dropdown`, and DropdownDefaults
+   *  fixes the *row* — MinHeight 56, MinWidth 200, InsideHorizontalPadding 20 (Dropdown.kt:364,367,385).
+   *  The canvas's fabMenu box is the whole menu sheet, so only the corner, the row inset and the
+   *  label come across; the box itself stays the one the canvas draws. */
+  fabMenu: { radius: 16, padX: 20, font: MIUIX_TYPE.main },
+  /** NavigationRailDefaults MinWidth 80 collapsed, ExpandedWidth 240 expanded (NavigationRail.kt:603,606);
+   *  the label is the bar's own 12sp token, not one of `TextStyles` (NavigationRail.kt:624,448).
+   *  The width is left to `railWidth`, which switches between the two — a fixed `w` here would pin
+   *  an expanded rail back to its collapsed width. */
+  navRail: { radius: 16, font: MIUIX_TYPE.navLabel },
+  /** FloatingToolbarDefaults.CornerRadius 50 — a capsule — with 12x8 outside padding and **no height
+   *  token**: the bar wraps whatever it holds, and Miuix's own control in it is a 40dp icon button,
+   *  so the canvas draws 40 + 2x8 (FloatingToolbar.kt:89,100,84). */
+  toolbar: { h: 56, radius: 50, padX: 8 },
+  /** SurfaceDefaults: RectangleShape and a shadow elevation of 0 (Surface.kt:150,153) */
+  box: { radius: 0 },
+  /** TextFieldDefaults: CornerRadius 16, InsideMargin 16x16, BorderWidth 2 (TextField.kt:376,379,382).
+   *  Miuix fixes no height — the field is its label plus that margin — and every preference row it
+   *  sits in has `heightIn(min = 56.dp)` (Component.kt:161), which is what the canvas draws. */
+  textField: { h: 56, radius: 16, padX: 16, font: MIUIX_TYPE.main },
+  /** DropdownDefaults MinHeight 56, InsideHorizontalPadding 20 (Dropdown.kt:364,385); the corner is
+   *  the container Card's 16, since a Dropdown declares none of its own. */
+  select: { h: 56, radius: 16, padX: 20, font: MIUIX_TYPE.main },
+  /** `requiredSize(26.dp)` on a `clip(CircleShape)` — a 26dp circle, not a rounded square
+   *  (Checkbox.kt:173,141) */
+  checkbox: { w: 26, h: 26, radius: 13, control: true },
+  /** `requiredSize(26.dp)`, drawn as a ring (RadioButton.kt:121) */
+  radio: { w: 26, h: 26, radius: 13, control: true },
+  /** Miuix has no date picker: a date is spun on `NumberPicker` columns at ItemHeight 45
+   *  (NumberPicker.kt:287), inside the dialog Miuix would put them in — hence the dialog's 32dp
+   *  corner (DialogContentLayout.kt:457). The canvas's datePicker box is the whole panel, so the
+   *  45dp per item is a fact the prompt carries, not a box the canvas can draw. */
+  datePicker: { radius: 32, font: MIUIX_TYPE.main },
+  /** the same NumberPicker columns, for a time (NumberPicker.kt:287) */
+  timePicker: { radius: 32, font: MIUIX_TYPE.main },
+  /** DividerDefaults.Thickness 0.75dp on the `dividerLine` role (Divider.kt:71,76). The canvas's
+   *  divider box already reserves the room its hairline sits in, so only the corner is cleared —
+   *  a divider has none. The colour needs no token here: every M3 role, `dividerLine` included, is
+   *  carried by `MIUIX_LIGHT`/`MIUIX_DARK` themselves. */
+  divider: { radius: 0 },
+  /** the infinite loading indicator: a 20dp orbit, a 2dp stroke and a 2dp dot
+   *  (ProgressIndicator.kt:335,338) */
+  loadingIndicator: { w: 20, h: 20, radius: 10 },
+  /** ProgressIndicatorDefaults.DefaultLinearProgressIndicatorHeight 6 (ProgressIndicator.kt:323) */
+  linearProgress: { h: 6, radius: 3 },
+  /** DefaultCircularProgressIndicatorSize 30 with a 4dp stroke (ProgressIndicator.kt:326,329) */
+  circularProgress: { w: 30, h: 30, radius: 15 },
 };
+
+/*
+ * Five kinds are deliberately absent, because Miuix has no component for them and inventing a token
+ * would claim a spec the library does not have: `text` (its size comes from `TextStyles`, and the
+ * family is already swapped — see `MIUIX_FONT_FAMILY`), and `image`, `carousel`, `camera` and `map`,
+ * which are host content the library never draws. Those keep the Material 3 box the canvas gives
+ * them, and the prompt says so in as many words rather than passing M3 numbers off as Miuix's.
+ */
 
 /** a metric, or nothing when Miuix does not fix one for the kind */
 export const miuixMetricOf = (kind: Kind): MiuixMetric | undefined => MIUIX_METRICS[kind];
