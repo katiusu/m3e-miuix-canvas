@@ -43,15 +43,15 @@ Rough placement is fine. The person presses **Tidy** and bars snap to the edges,
   "title": "Recipes",              // the app's name
   "brief": "Save and search recipes.",   // one or two sentences on what the app is for (optional)
   "frame": "phone",                // always "phone"
-  "platform": "android",           // "android" (default) or "web"
+  "platform": "android",           // "android" (default) | "web" | "miuix"
   "paletteKey": "purple",          // "purple" | "blue" | "green" | "coral" | "amber" | "teal" | "mono"
-  "theme": { "dark": false, "bothModes": true, "contrast": "standard", "shape": "rounded", "font": "roboto", "emphasized": false, "motion": "expressive" },
+  "theme": { "design": "m3", "dark": false, "bothModes": true, "contrast": "standard", "shape": "rounded", "font": "roboto", "emphasized": false, "motion": "expressive" },
   "frames": [ /* screens */ ],
   "groups": [ /* parts, bottom layer first */ ]
 }
 ```
 
-`theme` is optional. `contrast`: `standard | medium | high`. `shape`: `square | rounded | full`. `font`: `roboto | robotoFlex | robotoSerif | system`. `motion`: `standard | expressive`. `bothModes: true` asks for light and dark; `dark` picks which one the canvas shows.
+`theme` is optional. `design`: `m3` (default) | `miuix`. `miuix` re-skins every part on the canvas to Miuix (`top.yukonga.miuix.kmp`, the HyperOS design system) and writes the prompt against that library instead of Material 3. `platform` names the target the prompt asks for; `design: "miuix"` wins over it. `contrast`: `standard | medium | high`. `shape`: `square | rounded | full`. `font`: `roboto | robotoFlex | robotoSerif | system`. `motion`: `standard | expressive`. `bothModes: true` asks for light and dark; `dark` picks which one the canvas shows.
 
 ### Screens (`frames`)
 
